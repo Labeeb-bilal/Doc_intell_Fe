@@ -20,6 +20,10 @@ export type ContradictionGroupOut = components['schemas']['ContradictionGroupOut
 export type ContradictionRecordOut = components['schemas']['ContradictionRecordOut']
 export type ContradictionListResponse = components['schemas']['ContradictionListResponse']
 export type RetrievalTrace = components['schemas']['RetrievalTrace']
+export type CandidateChunk = components['schemas']['CandidateChunk']
+export type RerankResultEntry = components['schemas']['RerankResultEntry']
+export type PairDecision = components['schemas']['PairDecision']
+export type Citation = components['schemas']['Citation']
 export type ContradictionStatus = 'open' | 'resolved' | 'false_positive'
 
 const CHUNKS_PAGE_SIZE = 20
@@ -126,9 +130,14 @@ export function useChat() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (body: ChatRequest) => apiClient.post<ChatResponse>('/api/chat', body),
-    onSuccess: (data) => {
+    onSuccess: () => {
+      // Conversation list metadata (title/message_count) and contradiction counts
+      // change on every turn. The active conversation's own message history is
+      // intentionally NOT invalidated here — ChatPage renders the turn just sent
+      // from the mutation response itself (which alone carries `contradictions`;
+      // GET .../messages does not), so refetching would either race that render
+      // or duplicate it once historical and local turns overlap.
       queryClient.invalidateQueries({ queryKey: ['conversations'] })
-      queryClient.invalidateQueries({ queryKey: ['conversations', data.conversation_id, 'messages'] })
       queryClient.invalidateQueries({ queryKey: ['contradictions'] })
     },
   })

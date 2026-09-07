@@ -50,7 +50,7 @@ export function AppShell() {
   const badges = useBadgeCounts()
 
   return (
-    <div className="flex min-h-screen flex-col md:flex-row">
+    <div className="flex h-screen flex-col overflow-hidden md:flex-row">
       {/* Desktop sidebar */}
       <aside className="hidden w-60 shrink-0 border-r bg-card md:flex md:flex-col">
         <div className="px-5 py-5">
@@ -63,8 +63,10 @@ export function AppShell() {
         </nav>
       </aside>
 
-      {/* Main content */}
-      <main className="flex-1 pb-16 md:pb-0">
+      {/* Main content — each route scrolls internally within this fixed-height area.
+          A route that needs its own scroll regions (ChatPage) fills it exactly with
+          h-full and manages overflow itself. */}
+      <main className="flex-1 overflow-y-auto pb-16 md:pb-0">
         <Outlet />
       </main>
 
