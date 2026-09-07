@@ -111,7 +111,7 @@ function RetrievedTab({
         <span key="score" className="tabular-nums">
           {c.vector_score.toFixed(2)}
         </span>,
-        <span key="snippet" className="text-muted-foreground">
+        <span key="snippet" className="break-words text-muted-foreground">
           {textByChunkId.has(c.chunk_id) ? truncate(textByChunkId.get(c.chunk_id)!, 80) : '—'}
         </span>,
         usedChunkIds.has(c.chunk_id) ? <UsedTag key="tag" /> : null,
@@ -228,7 +228,7 @@ function UsedTab({
                 <span className="font-medium">{docName}</span>
                 {section && <span className="text-xs text-muted-foreground">{section}</span>}
               </div>
-              <p className="mt-1.5 text-muted-foreground">
+              <p className="mt-1.5 break-words text-muted-foreground">
                 {citation ? citation.text : 'Chunk text unavailable outside of cited sources.'}
               </p>
             </div>

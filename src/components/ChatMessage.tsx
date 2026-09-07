@@ -53,7 +53,7 @@ export function ChatMessage({
   if (role === 'user') {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[80%] whitespace-pre-wrap rounded-2xl bg-secondary px-4 py-2.5 text-sm text-secondary-foreground">
+        <div className="max-w-[80%] whitespace-pre-wrap break-words rounded-2xl bg-secondary px-4 py-2.5 text-sm text-secondary-foreground">
           {content}
         </div>
       </div>
@@ -139,12 +139,12 @@ function AnswerProse({
           </a>
         )
       },
-      p: ({ children }) => <p className="mb-2 leading-relaxed last:mb-0">{children}</p>,
+      p: ({ children }) => <p className="mb-2 break-words leading-relaxed last:mb-0">{children}</p>,
       strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
       em: ({ children }) => <em className="italic">{children}</em>,
       ul: ({ children }) => <ul className="my-2 list-disc space-y-1 pl-5 marker:text-muted-foreground">{children}</ul>,
       ol: ({ children }) => <ol className="my-2 list-decimal space-y-1 pl-5 marker:text-muted-foreground">{children}</ol>,
-      li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+      li: ({ children }) => <li className="break-words leading-relaxed">{children}</li>,
       table: ({ children }) => (
         <div className="my-2 overflow-x-auto rounded-md border">
           <table className="w-full border-collapse text-sm">{children}</table>
@@ -153,7 +153,7 @@ function AnswerProse({
       thead: ({ children }) => <thead className="bg-muted/50">{children}</thead>,
       tr: ({ children }) => <tr className="border-b last:border-b-0">{children}</tr>,
       th: ({ children }) => <th className="px-2 py-1.5 text-left font-medium">{children}</th>,
-      td: ({ children }) => <td className="px-2 py-1.5 align-top">{children}</td>,
+      td: ({ children }) => <td className="break-words px-2 py-1.5 align-top">{children}</td>,
       code: ({ children }) => <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">{children}</code>,
       pre: ({ children }) => (
         <pre className="my-2 overflow-x-auto rounded-md bg-muted p-2 font-mono text-xs">{children}</pre>

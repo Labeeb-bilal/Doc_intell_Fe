@@ -13,18 +13,22 @@ export function CitationPanel({ citation, onOpenChange }: CitationPanelProps) {
 
   return (
     <Sheet open={!!citation} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full md:max-w-md">
+      <SheetContent side="right" className="flex w-full flex-col md:max-w-md">
         {citation && (
           <>
-            <SheetHeader>
+            <SheetHeader className="shrink-0">
               <SheetTitle>Source {citation.marker}</SheetTitle>
               <SheetDescription>
                 {citation.document_name}
                 {section ? ` · ${section}` : ''}
               </SheetDescription>
             </SheetHeader>
-            <div className="mt-4 whitespace-pre-wrap rounded-md border bg-muted/30 p-4 text-sm leading-relaxed">
-              {citation.text}
+            {/* min-h-0 is load-bearing here: without it a flex-1 child won't actually
+                shrink below its content size, and overflow-y-auto never engages. */}
+            <div className="mt-4 min-h-0 flex-1 overflow-y-auto">
+              <div className="whitespace-pre-wrap break-words rounded-md border bg-muted/30 p-4 text-sm leading-relaxed">
+                {citation.text}
+              </div>
             </div>
           </>
         )}

@@ -135,7 +135,7 @@ function StatementBlock({ statement }: { statement: ContradictionGroupOut['state
   const section = formatSection(statement.page, statement.section)
   return (
     <div className="rounded-md border bg-background p-3 text-sm">
-      <p>&ldquo;{statement.text}&rdquo;</p>
+      <p className="break-words">&ldquo;{statement.text}&rdquo;</p>
       <div className="mt-2 space-y-0.5 border-t pt-2 text-xs text-muted-foreground">
         <p className="font-medium text-foreground">{statement.document_name}</p>
         {section && <p>{section}</p>}
