@@ -13,7 +13,7 @@ export function CitationPanel({ citation, onOpenChange }: CitationPanelProps) {
 
   return (
     <Sheet open={!!citation} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-md">
+      <SheetContent side="right" className="w-full md:max-w-md">
         {citation && (
           <>
             <SheetHeader>

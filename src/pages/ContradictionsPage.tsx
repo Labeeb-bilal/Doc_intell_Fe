@@ -97,7 +97,7 @@ export default function ContradictionsPage() {
       {/* Filters */}
       <div className="mt-4 flex flex-wrap gap-2">
         <Select value={severityFilter || ANY} onValueChange={(v) => setSeverityFilter(v === ANY ? '' : v)}>
-          <SelectTrigger className="h-8 w-[140px] text-xs">
+          <SelectTrigger className="h-8 w-[140px] text-xs" aria-label="Filter by severity">
             <SelectValue placeholder="Severity" />
           </SelectTrigger>
           <SelectContent>
@@ -111,7 +111,7 @@ export default function ContradictionsPage() {
         </Select>
 
         <Select value={typeFilter || ANY} onValueChange={(v) => setTypeFilter(v === ANY ? '' : v)}>
-          <SelectTrigger className="h-8 w-[140px] text-xs">
+          <SelectTrigger className="h-8 w-[140px] text-xs" aria-label="Filter by type">
             <SelectValue placeholder="Type" />
           </SelectTrigger>
           <SelectContent>
@@ -125,7 +125,7 @@ export default function ContradictionsPage() {
         </Select>
 
         <Select value={documentFilter || ANY} onValueChange={(v) => setDocumentFilter(v === ANY ? '' : v)}>
-          <SelectTrigger className="h-8 w-[180px] text-xs">
+          <SelectTrigger className="h-8 w-[180px] text-xs" aria-label="Filter by document">
             <SelectValue placeholder="Document" />
           </SelectTrigger>
           <SelectContent>

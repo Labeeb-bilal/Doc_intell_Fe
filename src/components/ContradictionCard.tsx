@@ -72,10 +72,10 @@ export function ContradictionCard({ group, selectable, selected, onSelectChange 
         )}
       </div>
 
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+      <div className="mt-3 grid gap-3 md:grid-cols-2">
         <StatementBlock statement={group.statement_a} />
         <div>
-          <div className="flex items-center gap-2 py-1 text-xs text-muted-foreground sm:hidden">
+          <div className="flex items-center gap-2 py-1 text-xs text-muted-foreground md:hidden">
             <span className="h-px flex-1 bg-border" /> vs <span className="h-px flex-1 bg-border" />
           </div>
           <StatementBlock statement={group.statement_b} />
@@ -121,6 +121,7 @@ export function ContradictionCard({ group, selectable, selected, onSelectChange 
         <Textarea
           className="mt-2"
           placeholder="Add a note (optional)"
+          aria-label="Note"
           value={note}
           onChange={(e) => setNote(e.target.value)}
           rows={2}

@@ -290,7 +290,7 @@ function ContradictionAnalysisTab({
         {stage.llm_calls === 0 ? (
           <p className="text-sm text-muted-foreground">No LLM call made — all pairs resolved from cache.</p>
         ) : (
-          <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm md:grid-cols-4">
             <DetailStat label="LLM calls" value={stage.llm_calls} />
             <DetailStat label="Verdicts returned" value={stage.verdicts_returned} />
             <DetailStat label="Rejected · span check" value={stage.verdicts_rejected_span_check} />

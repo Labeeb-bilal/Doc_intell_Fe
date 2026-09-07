@@ -251,7 +251,7 @@ function DocumentDetailPanel({ document }: { document: DocumentOut }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm md:grid-cols-3">
         <DetailField label="Effective date" value={formatAbsoluteDate(document.effective_date)} />
         <DetailField label="Embedding model" value={document.embedding_model ?? '—'} />
         <DetailField label="Attempts" value={String(document.attempts)} />

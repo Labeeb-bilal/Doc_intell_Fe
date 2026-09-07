@@ -283,6 +283,7 @@ function Composer({
             }
           }}
           placeholder="Ask a question about your documents…"
+          aria-label="Chat message"
           rows={2}
           maxLength={2000}
           className="resize-none"
