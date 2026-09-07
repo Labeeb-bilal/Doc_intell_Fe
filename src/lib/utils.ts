@@ -65,3 +65,12 @@ export function truncate(value: string, maxLength: number): string {
   if (value.length <= maxLength) return value
   return `${value.slice(0, maxLength - 1)}…`
 }
+
+export type SupportedFileType = 'pdf' | 'docx' | 'md' | 'txt'
+
+/** Extracts a supported file type from a filename's extension (lowercased, no dot). */
+export function getFileExtension(filename: string): SupportedFileType | 'other' {
+  const ext = filename.split('.').pop()?.toLowerCase()
+  if (ext === 'pdf' || ext === 'docx' || ext === 'md' || ext === 'txt') return ext
+  return 'other'
+}

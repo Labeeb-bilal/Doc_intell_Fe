@@ -8,8 +8,10 @@ import type {
   ToastProps,
 } from "@/components/ui/toast"
 
-const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
+const TOAST_LIMIT = 3
+// Visible duration is governed by ToastProvider's `duration` prop (5s, set in Toaster.tsx).
+// This just delays removing a dismissed toast from state until its exit animation finishes.
+const TOAST_REMOVE_DELAY = 1000
 
 type ToasterToast = ToastProps & {
   id: string
