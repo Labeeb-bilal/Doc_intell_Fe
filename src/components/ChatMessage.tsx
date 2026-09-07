@@ -1,5 +1,7 @@
-import { Fragment, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { AlertTriangle, ChevronDown, FileText, RotateCcw } from 'lucide-react'
+import ReactMarkdown, { type Components } from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { CitationChip } from '@/components/CitationChip'
@@ -9,6 +11,18 @@ import { cn } from '@/lib/utils'
 import type { Citation, ContradictionGroupOut } from '@/api/hooks'
 
 const CITATION_TOKEN = /\[S(\d+)\]/g
+
+/**
+ * Rewrites `[S1]` into a markdown link (`[S1](#cite-1)`) before parsing.
+ * Markdown links are valid inline content anywhere — including inside table
+ * cells, bold spans, list items — so this is what lets citation chips render
+ * correctly no matter where the model places them, without a custom remark
+ * plugin. The `a` component override below turns `#cite-N` links into chips
+ * and leaves any other link (rare, but the model could emit one) untouched.
+ */
+function toCitationLinks(content: string): string {
+  return content.replace(CITATION_TOKEN, (_match, num: string) => `[S${num}](#cite-${num})`)
+}
 
 export interface ChatMessageProps {
   role: 'user' | 'assistant'
@@ -104,35 +118,63 @@ function AnswerProse({
     return map
   }, [citations])
 
-  const parts = useMemo(() => {
-    const result: { text?: string; citation?: Citation; marker?: string }[] = []
-    let lastIndex = 0
-    for (const match of content.matchAll(CITATION_TOKEN)) {
-      const [token, num] = match
-      const index = match.index ?? 0
-      if (index > lastIndex) result.push({ text: content.slice(lastIndex, index) })
-      const citation = citationByNumber.get(num)
-      result.push({ citation, marker: citation?.marker ?? `S${num}` })
-      lastIndex = index + token.length
-    }
-    if (lastIndex < content.length) result.push({ text: content.slice(lastIndex) })
-    return result
-  }, [content, citationByNumber])
+  const linked = useMemo(() => toCitationLinks(content), [content])
+
+  const components: Components = useMemo(
+    () => ({
+      a: ({ href, children }) => {
+        if (href?.startsWith('#cite-')) {
+          const num = href.slice('#cite-'.length)
+          const citation = citationByNumber.get(num)
+          return (
+            <CitationChip
+              marker={citation?.marker ?? `S${num}`}
+              onClick={() => citation && onCitationClick?.(citation)}
+            />
+          )
+        }
+        return (
+          <a href={href} target="_blank" rel="noreferrer" className="underline underline-offset-2">
+            {children}
+          </a>
+        )
+      },
+      p: ({ children }) => <p className="mb-2 leading-relaxed last:mb-0">{children}</p>,
+      strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+      em: ({ children }) => <em className="italic">{children}</em>,
+      ul: ({ children }) => <ul className="my-2 list-disc space-y-1 pl-5 marker:text-muted-foreground">{children}</ul>,
+      ol: ({ children }) => <ol className="my-2 list-decimal space-y-1 pl-5 marker:text-muted-foreground">{children}</ol>,
+      li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+      table: ({ children }) => (
+        <div className="my-2 overflow-x-auto rounded-md border">
+          <table className="w-full border-collapse text-sm">{children}</table>
+        </div>
+      ),
+      thead: ({ children }) => <thead className="bg-muted/50">{children}</thead>,
+      tr: ({ children }) => <tr className="border-b last:border-b-0">{children}</tr>,
+      th: ({ children }) => <th className="px-2 py-1.5 text-left font-medium">{children}</th>,
+      td: ({ children }) => <td className="px-2 py-1.5 align-top">{children}</td>,
+      code: ({ children }) => <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">{children}</code>,
+      pre: ({ children }) => (
+        <pre className="my-2 overflow-x-auto rounded-md bg-muted p-2 font-mono text-xs">{children}</pre>
+      ),
+      blockquote: ({ children }) => (
+        <blockquote className="my-2 border-l-2 pl-3 text-muted-foreground">{children}</blockquote>
+      ),
+      h1: ({ children }) => <h3 className="mb-1 mt-3 font-semibold first:mt-0">{children}</h3>,
+      h2: ({ children }) => <h3 className="mb-1 mt-3 font-semibold first:mt-0">{children}</h3>,
+      h3: ({ children }) => <h3 className="mb-1 mt-3 font-semibold first:mt-0">{children}</h3>,
+      hr: () => <hr className="my-3 border-border" />,
+    }),
+    [citationByNumber, onCitationClick],
+  )
 
   return (
-    <p className="whitespace-pre-wrap leading-relaxed">
-      {parts.map((part, i) =>
-        part.text !== undefined ? (
-          <Fragment key={i}>{part.text}</Fragment>
-        ) : (
-          <CitationChip
-            key={i}
-            marker={part.marker!}
-            onClick={() => part.citation && onCitationClick?.(part.citation)}
-          />
-        ),
-      )}
-    </p>
+    <div className="text-sm">
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+        {linked}
+      </ReactMarkdown>
+    </div>
   )
 }
 
