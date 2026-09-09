@@ -64,10 +64,24 @@ export default function ChatPage() {
     return () => timers.forEach(clearTimeout)
   }
 
+  /**
+   * Conversational context for the LLM's prompt only — never for retrieval,
+   * and never a DB read; the last up-to-2 user turns already sitting in
+   * this page's own state (historical + this-session local exchanges),
+   * excluding the turn identified by `excludeId` (the one being sent right
+   * now, whether a fresh send or a retry — never its own history).
+   */
+  function recentUserHistory(excludeId: string) {
+    const historical = (historicalMessages ?? []).filter((m) => m.role === 'user').map((m) => m.content)
+    const local = localExchanges.filter((ex) => ex.id !== excludeId).map((ex) => ex.query)
+    return [...historical, ...local].slice(-2).map((content) => ({ role: 'user' as const, content }))
+  }
+
   function runQuery(id: string, query: string) {
     const cancelStages = scheduleLoadingStages()
+    const history = recentUserHistory(id)
     chatMutation.mutate(
-      { query, conversation_id: conversationId, options: { detect_contradictions: true } },
+      { query, conversation_id: conversationId, history, options: { detect_contradictions: true } },
       {
         onSuccess: (response) => {
           cancelStages()

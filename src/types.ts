@@ -287,6 +287,8 @@ export interface components {
             query: string;
             /** Conversation Id */
             conversation_id?: string | null;
+            /** History */
+            history?: components["schemas"]["HistoryMessage"][];
             options?: components["schemas"]["ChatOptions"] | null;
         };
         /** ChatResponse */
@@ -704,6 +706,25 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /**
+         * HistoryMessage
+         * @description Conversational context for the answer LLM's prompt only — never for
+         *     retrieval (services/retrieval.py always embeds the raw query alone) and
+         *     never read back from the DB (the frontend sends the last 2 user turns
+         *     it already holds in state). `role` is deliberately Literal["user"], not
+         *     ["user", "assistant"]: assistant turns are not accepted here, and
+         *     Pydantic rejects them with 422 rather than the service silently
+         *     filtering them out.
+         */
+        HistoryMessage: {
+            /**
+             * Role
+             * @constant
+             */
+            role: "user";
+            /** Content */
+            content: string;
         };
         /** MessageOut */
         MessageOut: {
