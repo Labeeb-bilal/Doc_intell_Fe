@@ -137,7 +137,17 @@ export function useChat() {
       // from the mutation response itself (which alone carries `contradictions`;
       // GET .../messages does not), so refetching would either race that render
       // or duplicate it once historical and local turns overlap.
-      queryClient.invalidateQueries({ queryKey: ['conversations'] })
+      //
+      // `exact: true` is load-bearing, not decoration: invalidateQueries matches
+      // by KEY PREFIX by default, and useMessages()'s key is
+      // ['conversations', conversationId, 'messages'] — sharing the
+      // ['conversations'] prefix. Without `exact`, this call silently also
+      // invalidates (and, for the conversation currently open, refetches) that
+      // messages query — reintroducing the exact duplicate-render bug the
+      // comment above claims doesn't happen, specifically for a follow-up sent
+      // in a conversation that was opened via the sidebar (so its messages
+      // query is already active) rather than a brand-new one.
+      queryClient.invalidateQueries({ queryKey: ['conversations'], exact: true })
       queryClient.invalidateQueries({ queryKey: ['contradictions'] })
     },
   })
