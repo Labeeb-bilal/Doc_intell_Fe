@@ -91,8 +91,13 @@ export function AppShell() {
           {sidebarOpen ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
         </button>
 
-        <div className="px-5 py-5">
-          <span className={cn('text-lg font-semibold tracking-tight', !sidebarOpen && 'sr-only')}>
+        <div className="overflow-hidden px-5 py-5">
+          <span
+            className={cn(
+              'block whitespace-nowrap text-lg font-semibold tracking-tight transition-opacity duration-150',
+              !sidebarOpen && 'opacity-0',
+            )}
+          >
             Doc Intelligence
           </span>
         </div>

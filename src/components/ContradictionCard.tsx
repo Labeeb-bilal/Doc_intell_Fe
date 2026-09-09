@@ -49,7 +49,7 @@ export function ContradictionCard({ group, selectable, selected, onSelectChange 
   }
 
   return (
-    <div className={cn('rounded-lg border p-4', !isOpen && 'bg-muted/30')}>
+    <div className={cn('rounded-lg border p-4 transition-colors duration-300', !isOpen && 'bg-muted/30')}>
       <div className="flex flex-wrap items-center gap-2">
         {selectable && (
           <Checkbox
@@ -66,7 +66,7 @@ export function ContradictionCard({ group, selectable, selected, onSelectChange 
         </span>
         <span className="text-xs text-muted-foreground">{Math.round(group.confidence * 100)}% confidence</span>
         {!isOpen && (
-          <span className="ml-auto text-xs font-medium text-muted-foreground">
+          <span className="ml-auto animate-in text-xs font-medium text-muted-foreground fade-in duration-300">
             {status === 'resolved' ? 'Resolved ✓' : 'Marked as false positive'}
           </span>
         )}
@@ -109,17 +109,20 @@ export function ContradictionCard({ group, selectable, selected, onSelectChange 
         <Button
           size="sm"
           variant="ghost"
-          className="gap-1 text-muted-foreground"
+          className="gap-1 text-muted-foreground transition-colors duration-150"
           onClick={() => setNoteOpen((o) => !o)}
         >
           note
-          <ChevronDown className={cn('h-3 w-3 transition-transform', noteOpen && 'rotate-180')} aria-hidden="true" />
+          <ChevronDown
+            className={cn('h-3 w-3 transition-transform duration-200', noteOpen && 'rotate-180')}
+            aria-hidden="true"
+          />
         </Button>
       </div>
 
       {noteOpen && (
         <Textarea
-          className="mt-2"
+          className="mt-2 animate-in fade-in slide-in-from-top-1 duration-200"
           placeholder="Add a note (optional)"
           aria-label="Note"
           value={note}

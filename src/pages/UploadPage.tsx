@@ -115,21 +115,22 @@ export default function UploadPage() {
       {resolvedRows.length > 0 && (
         <div className="mt-6 space-y-2">
           {resolvedRows.map(({ row, document }) => (
-            <DocumentStatusRow
-              key={row.key}
-              rowKey={row.key}
-              document={document}
-              pending={
-                row.duplicate
-                  ? { filename: row.file.name, sizeBytes: row.file.size, duplicate: true }
-                  : !document
-                    ? { filename: row.file.name, sizeBytes: row.file.size, duplicate: false }
-                    : undefined
-              }
-              onRetry={handleRetry}
-              onDismiss={handleDismiss}
-              retrying={retryMutation.isPending && retryMutation.variables === document?.id}
-            />
+            <div key={row.key} className="animate-in fade-in slide-in-from-top-1 duration-300">
+              <DocumentStatusRow
+                rowKey={row.key}
+                document={document}
+                pending={
+                  row.duplicate
+                    ? { filename: row.file.name, sizeBytes: row.file.size, duplicate: true }
+                    : !document
+                      ? { filename: row.file.name, sizeBytes: row.file.size, duplicate: false }
+                      : undefined
+                }
+                onRetry={handleRetry}
+                onDismiss={handleDismiss}
+                retrying={retryMutation.isPending && retryMutation.variables === document?.id}
+              />
+            </div>
           ))}
         </div>
       )}
@@ -143,10 +144,10 @@ export default function UploadPage() {
       {allTerminal && (
         <Link
           to="/chat"
-          className="mt-6 flex items-center gap-2 rounded-md bg-secondary px-4 py-3 text-sm font-medium text-secondary-foreground hover:bg-secondary/80"
+          className="group mt-6 flex animate-in items-center gap-2 rounded-md bg-secondary px-4 py-3 text-sm font-medium text-secondary-foreground fade-in slide-in-from-bottom-1 duration-300 hover:bg-secondary/80"
         >
           Your documents are ready — start asking questions
-          <ArrowRight className="h-4 w-4" />
+          <ArrowRight className="h-4 w-4 transition-transform duration-150 group-hover:translate-x-0.5" />
         </Link>
       )}
     </div>

@@ -1,5 +1,5 @@
 import { Fragment, useState } from 'react'
-import { ChevronDown, ChevronRight, ChevronLeft, FolderOpen, Trash2 } from 'lucide-react'
+import { ChevronRight, ChevronLeft, FolderOpen, Trash2 } from 'lucide-react'
 import { FileTypeIcon, StatusPill } from '@/components/DocumentStatusRow'
 import { EmptyState } from '@/components/EmptyState'
 import { Badge } from '@/components/ui/badge'
@@ -111,11 +111,13 @@ function DesktopTable({ documents, expandedId, onToggle, onDelete }: TableProps)
             return (
               <Fragment key={doc.id}>
                 <tr
-                  className="cursor-pointer border-b last:border-b-0 hover:bg-secondary/40"
+                  className="cursor-pointer border-b transition-colors duration-150 last:border-b-0 hover:bg-secondary/40"
                   onClick={() => onToggle(doc.id)}
                 >
                   <td className="px-3 py-2 text-muted-foreground">
-                    {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    <ChevronRight
+                      className={cn('h-4 w-4 transition-transform duration-200', isExpanded && 'rotate-90')}
+                    />
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-2">
@@ -142,7 +144,9 @@ function DesktopTable({ documents, expandedId, onToggle, onDelete }: TableProps)
                         <TooltipContent>{doc.error_message}</TooltipContent>
                       </Tooltip>
                     ) : (
-                      <StatusPill status={doc.status} chunkCount={doc.chunk_count} />
+                      <span key={doc.status} className="inline-block animate-in fade-in zoom-in-95 duration-300">
+                        <StatusPill status={doc.status} chunkCount={doc.chunk_count} />
+                      </span>
                     )}
                   </td>
                   <td className="px-3 py-2 text-muted-foreground">{formatAbsoluteDate(doc.effective_date)}</td>
@@ -165,7 +169,9 @@ function DesktopTable({ documents, expandedId, onToggle, onDelete }: TableProps)
                 {isExpanded && (
                   <tr className="border-b bg-muted/20">
                     <td colSpan={10} className="px-3 py-4">
-                      <DocumentDetailPanel document={doc} />
+                      <div className="animate-in fade-in duration-200">
+                        <DocumentDetailPanel document={doc} />
+                      </div>
                     </td>
                   </tr>
                 )}
@@ -201,7 +207,7 @@ function MobileCards({ documents, expandedId, onToggle, onDelete }: TableProps) 
       {documents.map((doc) => {
         const isExpanded = expandedId === doc.id
         return (
-          <div key={doc.id} className="rounded-md border p-3">
+          <div key={doc.id} className="rounded-md border p-3 transition-colors duration-150 hover:bg-secondary/20">
             <div className="flex items-center gap-2" onClick={() => onToggle(doc.id)} role="button" tabIndex={0}>
               <FileTypeIcon type={getFileExtension(doc.original_filename)} />
               <div className="min-w-0 flex-1">
@@ -210,7 +216,9 @@ function MobileCards({ documents, expandedId, onToggle, onDelete }: TableProps) 
                   {formatBytes(doc.size_bytes)} · {formatDate(doc.created_at)}
                 </p>
               </div>
-              <StatusPill status={doc.status} chunkCount={doc.chunk_count} />
+              <span key={doc.status} className="inline-block animate-in fade-in zoom-in-95 duration-300">
+                <StatusPill status={doc.status} chunkCount={doc.chunk_count} />
+              </span>
               <Button
                 variant="ghost"
                 size="icon"
@@ -228,7 +236,7 @@ function MobileCards({ documents, expandedId, onToggle, onDelete }: TableProps) 
               <p className="mt-2 text-xs text-severity-critical">{doc.error_message}</p>
             )}
             {isExpanded && (
-              <div className="mt-3 border-t pt-3">
+              <div className="mt-3 animate-in border-t pt-3 fade-in duration-200">
                 <DocumentDetailPanel document={doc} />
               </div>
             )}

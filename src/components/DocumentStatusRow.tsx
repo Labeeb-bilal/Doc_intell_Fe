@@ -110,7 +110,7 @@ export function DocumentStatusRow({ rowKey, document, pending, onRetry, onDismis
     showProgress && document?.chunk_count ? Math.min(100, (document.chunks_done / document.chunk_count) * 100) : null
 
   return (
-    <div className="rounded-md border px-4 py-3">
+    <div className="rounded-md border px-4 py-3 transition-shadow duration-200 hover:shadow-sm">
       <div className="flex items-center gap-3">
         <FileTypeIcon type={fileType} />
 
@@ -122,7 +122,12 @@ export function DocumentStatusRow({ rowKey, document, pending, onRetry, onDismis
         </Tooltip>
 
         <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{formatBytes(sizeBytes)}</span>
-        <StatusPill status={status} chunkCount={document?.chunk_count} />
+        {/* key={status}: remounts on every status change, replaying the
+            fade-in — a small "pop" that makes pending -> processing -> ready
+            register as something happened, not just a silent swap. */}
+        <span key={status} className="animate-in fade-in zoom-in-95 duration-300">
+          <StatusPill status={status} chunkCount={document?.chunk_count} />
+        </span>
 
         {status === 'failed' && document && (
           <Button variant="outline" size="sm" className="h-7 gap-1.5" onClick={() => onRetry(document.id)} disabled={retrying}>

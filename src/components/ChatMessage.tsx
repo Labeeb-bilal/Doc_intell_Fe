@@ -52,7 +52,7 @@ export function ChatMessage({
 }: ChatMessageProps) {
   if (role === 'user') {
     return (
-      <div className="flex justify-end">
+      <div className="flex animate-in justify-end fade-in slide-in-from-bottom-2 duration-300">
         <div className="max-w-[80%] whitespace-pre-wrap break-words rounded-2xl bg-secondary px-4 py-2.5 text-sm text-secondary-foreground">
           {content}
         </div>
@@ -62,7 +62,7 @@ export function ChatMessage({
 
   if (errorMessage) {
     return (
-      <div className="flex justify-start">
+      <div className="flex animate-in justify-start fade-in slide-in-from-bottom-2 duration-300">
         <div className="max-w-[80%] rounded-2xl border border-severity-critical-bg bg-severity-critical-bg/50 px-4 py-3 text-sm">
           <p className="text-severity-critical">{errorMessage}</p>
           {onRetry && (
@@ -76,8 +76,8 @@ export function ChatMessage({
   }
 
   return (
-    <div className="flex justify-start">
-      <div className="w-full max-w-[85%] rounded-2xl border bg-card px-4 py-3 text-sm shadow-sm">
+    <div className="flex animate-in justify-start fade-in slide-in-from-bottom-2 duration-300">
+      <div className="w-full max-w-[85%] rounded-2xl border bg-card px-4 py-3 text-sm shadow-sm transition-shadow duration-200 hover:shadow-md">
         <AnswerProse content={content} citations={citations} onCitationClick={onCitationClick} />
 
         {citations.length > 0 && (
@@ -201,7 +201,7 @@ function SourceStrip({
           key={c.chunk_id}
           type="button"
           onClick={() => onCitationClick?.(c)}
-          className="inline-flex items-center gap-1.5 rounded-full border bg-background px-2.5 py-1 text-xs text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+          className="inline-flex items-center gap-1.5 rounded-full border bg-background px-2.5 py-1 text-xs text-muted-foreground transition-colors duration-150 hover:border-citation hover:bg-secondary/60 hover:text-foreground"
         >
           <FileText className="h-3 w-3" aria-hidden="true" />
           <span className="font-medium text-foreground">{c.marker}</span>
@@ -227,16 +227,19 @@ function ContradictionAlert({ contradictions, total }: { contradictions: Contrad
       <button
         type="button"
         onClick={() => setExpanded((e) => !e)}
-        className="flex w-full items-center gap-2 rounded-md border border-l-4 border-amber-500 bg-severity-warning-bg px-3 py-2 text-left text-sm font-medium text-severity-warning hover:brightness-95"
+        className="flex w-full items-center gap-2 rounded-md border border-l-4 border-amber-500 bg-severity-warning-bg px-3 py-2 text-left text-sm font-medium text-severity-warning transition-[filter] duration-150 hover:brightness-95 active:brightness-90"
       >
         <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
         <span className="flex-1">
           {count} contradiction{count === 1 ? '' : 's'} found
         </span>
-        <ChevronDown className={cn('h-4 w-4 transition-transform', expanded && 'rotate-180')} aria-hidden="true" />
+        <ChevronDown
+          className={cn('h-4 w-4 transition-transform duration-200', expanded && 'rotate-180')}
+          aria-hidden="true"
+        />
       </button>
       {expanded && (
-        <div className="mt-2 space-y-2">
+        <div className="mt-2 animate-in space-y-2 fade-in slide-in-from-top-1 duration-200">
           {contradictions.map((group) => (
             <ContradictionCard key={group.group_id} group={group} />
           ))}

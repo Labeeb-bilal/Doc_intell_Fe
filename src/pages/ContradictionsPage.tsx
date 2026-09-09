@@ -141,7 +141,7 @@ export default function ContradictionsPage() {
 
       {/* Bulk action */}
       {selected.size > 0 && (
-        <div className="mt-4 flex items-center gap-2 rounded-md border bg-secondary/50 px-3 py-2">
+        <div className="mt-4 flex animate-in items-center gap-2 rounded-md border bg-secondary/50 px-3 py-2 fade-in slide-in-from-top-1 duration-200">
           <span className="text-sm">{selected.size} selected</span>
           <Button size="sm" onClick={handleBulkResolve} disabled={bulkRunning}>
             {bulkRunning ? 'Resolving…' : 'Mark all selected as resolved'}
@@ -162,14 +162,19 @@ export default function ContradictionsPage() {
         ) : contradictions.length === 0 ? (
           <ContradictionsEmptyState statusFilter={statusFilter} totalKnown={totalKnown} />
         ) : (
-          contradictions.map((group) => (
-            <ContradictionCard
+          contradictions.map((group, i) => (
+            <div
               key={group.group_id}
-              group={group}
-              selectable
-              selected={selected.has(group.group_id)}
-              onSelectChange={(isSelected) => toggleSelected(group.group_id, isSelected)}
-            />
+              className="animate-in fade-in slide-in-from-bottom-1 duration-300"
+              style={{ animationDelay: `${Math.min(i, 8) * 40}ms`, animationFillMode: 'backwards' }}
+            >
+              <ContradictionCard
+                group={group}
+                selectable
+                selected={selected.has(group.group_id)}
+                onSelectChange={(isSelected) => toggleSelected(group.group_id, isSelected)}
+              />
+            </div>
           ))
         )}
       </div>
@@ -211,7 +216,7 @@ function SummaryChip({
       type="button"
       onClick={onClick}
       className={cn(
-        'rounded-full border px-3 py-1.5 text-sm font-medium transition-colors',
+        'rounded-full border px-3 py-1.5 text-sm font-medium transition-all duration-150 active:scale-95',
         active ? 'border-foreground bg-foreground text-background' : 'text-muted-foreground hover:bg-secondary',
       )}
     >
