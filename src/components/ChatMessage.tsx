@@ -7,7 +7,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { CitationChip } from '@/components/CitationChip'
 import { ContradictionCard } from '@/components/ContradictionCard'
 import { TraceViewer } from '@/components/TraceViewer'
-import { cn } from '@/lib/utils'
+import { cn, truncate } from '@/lib/utils'
 import type { Citation, ContradictionGroupOut } from '@/api/hooks'
 
 const CITATION_TOKEN = /\[S(\d+)\]/g
@@ -89,7 +89,12 @@ export function ChatMessage({
         )}
 
         {conversationId && messageId && (
-          <TraceDisclosure conversationId={conversationId} messageId={messageId} citations={citations} />
+          <TraceDisclosure
+            conversationId={conversationId}
+            messageId={messageId}
+            citations={citations}
+            contradictions={contradictions}
+          />
         )}
       </div>
     </div>
@@ -202,6 +207,7 @@ function SourceStrip({
           <span className="font-medium text-foreground">{c.marker}</span>
           <span className="max-w-[10rem] truncate">{c.document_name}</span>
           {c.page && <span>· p.{c.page}</span>}
+          {c.section && <span>· {truncate(c.section, 20)}</span>}
         </button>
       ))}
     </div>
@@ -221,7 +227,7 @@ function ContradictionAlert({ contradictions, total }: { contradictions: Contrad
       <button
         type="button"
         onClick={() => setExpanded((e) => !e)}
-        className="flex w-full items-center gap-2 rounded-md border border-severity-warning-bg bg-severity-warning-bg px-3 py-2 text-left text-sm font-medium text-severity-warning hover:brightness-95"
+        className="flex w-full items-center gap-2 rounded-md border border-l-4 border-amber-500 bg-severity-warning-bg px-3 py-2 text-left text-sm font-medium text-severity-warning hover:brightness-95"
       >
         <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
         <span className="flex-1">
@@ -248,10 +254,12 @@ function TraceDisclosure({
   conversationId,
   messageId,
   citations,
+  contradictions,
 }: {
   conversationId: string
   messageId: string
   citations: Citation[]
+  contradictions: ContradictionGroupOut[]
 }) {
   const [open, setOpen] = useState(false)
 
@@ -264,7 +272,13 @@ function TraceDisclosure({
         </Button>
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <TraceViewer conversationId={conversationId} messageId={messageId} citations={citations} enabled={open} />
+        <TraceViewer
+          conversationId={conversationId}
+          messageId={messageId}
+          citations={citations}
+          contradictions={contradictions}
+          enabled={open}
+        />
       </CollapsibleContent>
     </Collapsible>
   )

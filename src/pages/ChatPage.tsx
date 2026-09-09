@@ -154,7 +154,9 @@ export default function ChatPage() {
               <Skeleton className="h-12 w-full" />
             </div>
           ) : !conversations || conversations.length === 0 ? (
-            <p className="p-3 text-sm text-muted-foreground">No conversations yet.</p>
+            <div className="flex h-full items-center justify-center p-6 text-center text-sm text-muted-foreground">
+              No conversations yet. Ask your first question.
+            </div>
           ) : (
             conversations.map((c) => (
               <button
@@ -162,15 +164,16 @@ export default function ChatPage() {
                 type="button"
                 onClick={() => handleSelectConversation(c.id)}
                 className={cn(
-                  'flex w-full flex-col items-start gap-0.5 border-b px-3 py-2.5 text-left hover:bg-secondary/50',
-                  c.id === conversationId && 'bg-secondary',
+                  'flex w-full flex-col items-start gap-0.5 border-b px-3 py-2.5 text-left hover:bg-muted',
+                  c.id === conversationId && 'bg-accent',
                 )}
               >
                 <span className="w-full truncate text-sm font-medium">
-                  {c.title ? truncate(c.title, 48) : 'Untitled conversation'}
+                  {c.title ? truncate(c.title, 35) : 'Untitled conversation'}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {formatDate(c.updated_at)} · {c.message_count} messages
+                  {formatDate(c.updated_at)}
+                  {c.message_count > 0 ? ` · ${c.message_count} messages` : ''}
                 </span>
               </button>
             ))
