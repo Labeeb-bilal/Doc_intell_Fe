@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { AlertTriangle, ChevronLeft, ChevronRight, FileStack, Home, MessageSquare } from 'lucide-react'
-import { NavLink, Outlet } from 'react-router-dom'
-import { cn } from '@/lib/utils'
+import { AlertTriangle, ChevronLeft, ChevronRight, FileStack, Home, MessageSquare, Plus } from 'lucide-react'
+import { NavLink, Outlet, useParams } from 'react-router-dom'
+import { cn, formatDate, truncate } from '@/lib/utils'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useContradictions, useConversations, useStats, totalDocuments } from '@/api/hooks'
 
@@ -79,7 +80,7 @@ export function AppShell() {
       <aside
         className={cn(
           'relative hidden shrink-0 border-r bg-card transition-all duration-200 md:flex md:flex-col',
-          sidebarOpen ? 'w-56' : 'w-14',
+          sidebarOpen ? 'w-64' : 'w-14',
         )}
       >
         <button
@@ -101,11 +102,16 @@ export function AppShell() {
             Doc Intelligence
           </span>
         </div>
-        <nav className="flex flex-1 flex-col gap-1 px-3">
+        <nav className="flex shrink-0 flex-col gap-1 px-3">
           {NAV_ITEMS.map((item) => (
             <SidebarLink key={item.to} item={item} badgeCount={getBadge(badges, item.to)} collapsed={!sidebarOpen} />
           ))}
         </nav>
+
+        {/* Chat history — fills the rest of the sidebar below the nav, same
+            spot ChatGPT/Claude put it. Hidden when collapsed (icon rail only
+            has room for the nav icons). */}
+        {sidebarOpen && <ChatHistorySection />}
       </aside>
 
       {/* Main content — each route scrolls internally within this fixed-height area.
@@ -121,6 +127,63 @@ export function AppShell() {
           <TabBarLink key={item.to} item={item} badgeCount={getBadge(badges, item.to)} />
         ))}
       </nav>
+    </div>
+  )
+}
+
+/** Past conversations, filling the sidebar below the nav (ChatGPT/Claude
+ * style): a "New chat" affordance up top, then the list itself scrolling
+ * independently in the remaining space. Clicking an entry jumps straight to
+ * /conversation/:id (see App.tsx / ChatPage.tsx) — that route reads the id
+ * from the URL and loads that conversation's history. */
+function ChatHistorySection() {
+  const { conversationId } = useParams<{ conversationId: string }>()
+  const { data: conversations, isLoading } = useConversations()
+
+  return (
+    <div className="mt-2 flex min-h-0 flex-1 flex-col border-t px-3 pt-3">
+      <div className="flex items-center justify-between pb-1">
+        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Chats</span>
+        <NavLink
+          to="/chat"
+          aria-label="New chat"
+          className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+        >
+          <Plus className="h-3.5 w-3.5" />
+        </NavLink>
+      </div>
+
+      <div className="flex-1 space-y-0.5 overflow-y-auto pb-3">
+        {isLoading ? (
+          <div className="space-y-2 pt-1">
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-9 w-full" />
+          </div>
+        ) : !conversations || conversations.length === 0 ? (
+          <p className="px-1 pt-2 text-xs text-muted-foreground">No conversations yet.</p>
+        ) : (
+          conversations.map((c) => (
+            <NavLink
+              key={c.id}
+              to={`/conversation/${c.id}`}
+              className={({ isActive }) =>
+                cn(
+                  'flex w-full flex-col items-start gap-0.5 rounded-md px-2 py-1.5 text-left transition-colors',
+                  isActive || c.id === conversationId
+                    ? 'bg-secondary text-secondary-foreground'
+                    : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
+                )
+              }
+            >
+              <span className="w-full truncate text-sm font-medium">
+                {c.title ? truncate(c.title, 28) : 'Untitled conversation'}
+              </span>
+              <span className="text-xs text-muted-foreground">{formatDate(c.updated_at)}</span>
+            </NavLink>
+          ))
+        )}
+      </div>
     </div>
   )
 }

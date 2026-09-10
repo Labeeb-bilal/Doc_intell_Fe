@@ -1,5 +1,5 @@
-import { Fragment, useState } from 'react'
-import { ChevronRight, ChevronLeft, FolderOpen, Trash2 } from 'lucide-react'
+import { Fragment, useState, type ReactNode } from 'react'
+import { ChevronRight, FolderOpen, Trash2 } from 'lucide-react'
 import { FileTypeIcon, StatusPill } from '@/components/DocumentStatusRow'
 import { EmptyState } from '@/components/EmptyState'
 import { Badge } from '@/components/ui/badge'
@@ -15,7 +15,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useToast } from '@/hooks/use-toast'
-import { useDeleteDocument, useDocumentChunks, useDocuments, type DocumentOut } from '@/api/hooks'
+import { useDeleteDocument, useDocuments, type DocumentOut } from '@/api/hooks'
 import { ApiError } from '@/api/client'
 import { cn, formatAbsoluteDate, formatBytes, formatDate, getFileExtension, truncate } from '@/lib/utils'
 
@@ -77,7 +77,7 @@ function LibrarySkeleton() {
 }
 
 // ---------------------------------------------------------------------------
-// Desktop table
+// Desktop table — name, type, size, status, uploaded, delete
 // ---------------------------------------------------------------------------
 
 interface TableProps {
@@ -97,10 +97,7 @@ function DesktopTable({ documents, expandedId, onToggle, onDelete }: TableProps)
             <th className="px-3 py-2">Filename</th>
             <th className="px-3 py-2">Type</th>
             <th className="px-3 py-2">Size</th>
-            <th className="px-3 py-2">Pages</th>
-            <th className="px-3 py-2">Chunks</th>
             <th className="px-3 py-2">Status</th>
-            <th className="px-3 py-2">Effective date</th>
             <th className="px-3 py-2">Uploaded</th>
             <th className="w-10 px-3 py-2" />
           </tr>
@@ -131,8 +128,6 @@ function DesktopTable({ documents, expandedId, onToggle, onDelete }: TableProps)
                     </Badge>
                   </td>
                   <td className="px-3 py-2 tabular-nums text-muted-foreground">{formatBytes(doc.size_bytes)}</td>
-                  <td className="px-3 py-2 tabular-nums text-muted-foreground">{doc.page_count ?? '—'}</td>
-                  <td className="px-3 py-2 tabular-nums text-muted-foreground">{doc.chunk_count ?? '—'}</td>
                   <td className="px-3 py-2">
                     {doc.status === 'failed' && doc.error_message ? (
                       <Tooltip>
@@ -149,7 +144,6 @@ function DesktopTable({ documents, expandedId, onToggle, onDelete }: TableProps)
                       </span>
                     )}
                   </td>
-                  <td className="px-3 py-2 text-muted-foreground">{formatAbsoluteDate(doc.effective_date)}</td>
                   <td className="px-3 py-2 text-muted-foreground">{formatDate(doc.created_at)}</td>
                   <td className="px-3 py-2">
                     <Button
@@ -168,7 +162,7 @@ function DesktopTable({ documents, expandedId, onToggle, onDelete }: TableProps)
                 </tr>
                 {isExpanded && (
                   <tr className="border-b bg-muted/20">
-                    <td colSpan={10} className="px-3 py-4">
+                    <td colSpan={7} className="px-3 py-4">
                       <div className="animate-in fade-in duration-200">
                         <DocumentDetailPanel document={doc} />
                       </div>
@@ -186,11 +180,11 @@ function DesktopTable({ documents, expandedId, onToggle, onDelete }: TableProps)
 
 function FilenameCell({ doc }: { doc: DocumentOut }) {
   const name = doc.original_filename
-  if (name.length <= 40) return <span className="font-medium">{name}</span>
+  if (name.length <= 35) return <span className="font-medium">{name}</span>
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className="font-medium">{truncate(name, 40)}</span>
+        <span className="font-medium">{truncate(name, 35)}</span>
       </TooltipTrigger>
       <TooltipContent>{name}</TooltipContent>
     </Tooltip>
@@ -198,7 +192,7 @@ function FilenameCell({ doc }: { doc: DocumentOut }) {
 }
 
 // ---------------------------------------------------------------------------
-// Mobile cards
+// Mobile cards — filename, type, size, status, uploaded, delete
 // ---------------------------------------------------------------------------
 
 function MobileCards({ documents, expandedId, onToggle, onDelete }: TableProps) {
@@ -213,7 +207,7 @@ function MobileCards({ documents, expandedId, onToggle, onDelete }: TableProps) 
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{truncate(doc.original_filename, 40)}</p>
                 <p className="text-xs text-muted-foreground">
-                  {formatBytes(doc.size_bytes)} · {formatDate(doc.created_at)}
+                  {doc.file_type.toUpperCase()} · {formatBytes(doc.size_bytes)} · {formatDate(doc.created_at)}
                 </p>
               </div>
               <span key={doc.status} className="inline-block animate-in fade-in zoom-in-95 duration-300">
@@ -248,84 +242,25 @@ function MobileCards({ documents, expandedId, onToggle, onDelete }: TableProps) 
 }
 
 // ---------------------------------------------------------------------------
-// Expanded detail — effective date, embedding model, attempts, chunk table
+// Expanded detail — effective date (when present), file type, size, upload
+// date, status. Nothing else: no embedding model, no attempts, no chunks.
 // ---------------------------------------------------------------------------
 
 function DocumentDetailPanel({ document }: { document: DocumentOut }) {
-  const [page, setPage] = useState(1)
-  const { data: chunksResponse, isLoading } = useDocumentChunks(document.id, page)
-
-  const totalPages = chunksResponse ? Math.max(1, Math.ceil(chunksResponse.total / chunksResponse.limit)) : 1
-
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm md:grid-cols-3">
+    <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm md:grid-cols-3">
+      {document.effective_date && (
         <DetailField label="Effective date" value={formatAbsoluteDate(document.effective_date)} />
-        <DetailField label="Embedding model" value={document.embedding_model ?? '—'} />
-        <DetailField label="Attempts" value={String(document.attempts)} />
-      </div>
-
-      <div>
-        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Chunks</p>
-        {isLoading ? (
-          <Skeleton className="h-24 w-full" />
-        ) : !chunksResponse || chunksResponse.chunks.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No chunks indexed yet.</p>
-        ) : (
-          <div className="overflow-x-auto rounded-md border bg-background">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b text-left text-muted-foreground">
-                  <th className="px-2 py-1.5">Ordinal</th>
-                  <th className="px-2 py-1.5">Page</th>
-                  <th className="px-2 py-1.5">Section</th>
-                </tr>
-              </thead>
-              <tbody>
-                {chunksResponse.chunks.map((chunk) => (
-                  <tr key={chunk.chunk_id} className="border-b last:border-b-0">
-                    <td className="px-2 py-1.5 tabular-nums">{chunk.ordinal}</td>
-                    <td className="px-2 py-1.5 tabular-nums">
-                      {chunk.page_start ? (chunk.page_end && chunk.page_end !== chunk.page_start ? `${chunk.page_start}–${chunk.page_end}` : chunk.page_start) : '—'}
-                    </td>
-                    <td className="px-2 py-1.5">{chunk.section_path.join(' > ') || '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between border-t px-2 py-1.5">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 gap-1 px-2 text-xs"
-                  disabled={page <= 1}
-                  onClick={() => setPage((p) => p - 1)}
-                >
-                  <ChevronLeft className="h-3 w-3" /> Prev
-                </Button>
-                <span className="text-xs text-muted-foreground">
-                  Page {page} of {totalPages}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 gap-1 px-2 text-xs"
-                  disabled={page >= totalPages}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  Next <ChevronRight className="h-3 w-3" />
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+      )}
+      <DetailField label="File type" value={document.file_type.toUpperCase()} />
+      <DetailField label="Size" value={formatBytes(document.size_bytes)} />
+      <DetailField label="Upload date" value={formatAbsoluteDate(document.created_at)} />
+      <DetailField label="Status" value={<StatusPill status={document.status} chunkCount={document.chunk_count} />} />
     </div>
   )
 }
 
-function DetailField({ label, value }: { label: string; value: string }) {
+function DetailField({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div>
       <p className="text-xs text-muted-foreground">{label}</p>

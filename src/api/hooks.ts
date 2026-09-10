@@ -9,8 +9,6 @@ import type { components } from '@/types'
 
 export type DocumentOut = components['schemas']['DocumentOut']
 export type DocumentUploadItem = components['schemas']['DocumentUploadItem']
-export type ChunkOut = components['schemas']['ChunkOut']
-export type ChunksResponse = components['schemas']['ChunksResponse']
 export type StatsResponse = components['schemas']['StatsResponse']
 export type ChatRequest = components['schemas']['ChatRequest']
 export type ChatResponse = components['schemas']['ChatResponse']
@@ -25,8 +23,6 @@ export type RerankResultEntry = components['schemas']['RerankResultEntry']
 export type PairDecision = components['schemas']['PairDecision']
 export type Citation = components['schemas']['Citation']
 export type ContradictionStatus = 'open' | 'resolved' | 'false_positive'
-
-const CHUNKS_PAGE_SIZE = 20
 
 /** Sum of documents_by_status — StatsResponse has no flat total_documents field. */
 export function totalDocuments(stats: StatsResponse | undefined): number {
@@ -57,18 +53,6 @@ export function useDocument(id: string | undefined) {
   return useQuery({
     queryKey: ['documents', 'detail', id] as QueryKey,
     queryFn: () => apiClient.get<DocumentOut>(`/api/documents/${id}`),
-    enabled: !!id,
-  })
-}
-
-export function useDocumentChunks(id: string | undefined, page: number) {
-  const offset = (page - 1) * CHUNKS_PAGE_SIZE
-  return useQuery({
-    queryKey: ['documents', id, 'chunks', page] as QueryKey,
-    queryFn: () =>
-      apiClient.get<ChunksResponse>(
-        `/api/documents/${id}/chunks?limit=${CHUNKS_PAGE_SIZE}&offset=${offset}`,
-      ),
     enabled: !!id,
   })
 }

@@ -3,18 +3,8 @@ import { ArrowRight, Info } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { useDocuments, useMessageTrace, type Citation, type ContradictionGroupOut } from '@/api/hooks'
+import { useDocuments, useMessageTrace, type Citation, type ContradictionGroupOut, type PairDecision } from '@/api/hooks'
 import { cn, formatAbsoluteDate, formatSection, truncate } from '@/lib/utils'
-
-const REJECTION_LABELS: Record<string, string> = {
-  same_document: 'Same document',
-  similarity_below_threshold: 'Not similar enough',
-  near_duplicate: 'Near-duplicate',
-  numeric_exempt: 'Numeric difference — passed upper bound',
-  false_positive_suppressed: 'Previously marked false positive',
-  cached_verdict: 'Already known',
-  over_pair_limit: 'Pair limit reached',
-}
 
 const SEVERITY_BADGE: Record<string, string> = {
   critical: 'bg-severity-critical-bg text-severity-critical',
@@ -101,7 +91,10 @@ export function TraceViewer({ conversationId, messageId, citations, contradictio
 // Tab 1 — Retrieved
 // ---------------------------------------------------------------------------
 
-const RETRIEVED_WIDTHS = ['w-12', '', 'w-[90px]', '', 'w-[60px]']
+// Exactly one column per table (Snippet here; Source in the others below)
+// is left without a fixed width — under table-fixed that column alone
+// absorbs whatever space the fixed-width columns don't use.
+const RETRIEVED_WIDTHS = ['w-12', 'w-[190px]', 'w-[90px]', '', 'w-[60px]']
 
 function RetrievedTab({
   candidates,
@@ -181,6 +174,7 @@ function RerankedTab({
           </Tooltip>,
           '',
         ]}
+        columnWidths={['w-[130px]', 'w-10', '', 'w-[150px]', 'w-[70px]']}
         rows={sorted.map((r) => {
           const doc = docNameByChunkId.get(r.chunk_id)
           const highlight = r.rank_delta >= 3
@@ -299,8 +293,145 @@ function UsedTab({
 }
 
 // ---------------------------------------------------------------------------
-// Tab 4 — Contradiction analysis
+// Tab 4 — Contradiction analysis: the pair-filtering funnel
+//
+// Every candidate pair moves through the same four stages left to right as
+// it survives more of the pipeline (see services/contradictions.py):
+// generated -> passed cosine -> sent to the LLM, OR reused from the cache
+// entirely (skipping cosine). This section renders each pair's *final*
+// resting point, not a blow-by-blow of every stage.
 // ---------------------------------------------------------------------------
+
+type PairState = 'rejected' | 'cosine_passed' | 'sent_to_llm' | 'cached'
+
+/**
+ * `filter_log` reasons, straight from the backend (see
+ * services/contradictions.py's `_decision()` call sites):
+ *   - "cached_verdict" -> reused from a prior query, never touched cosine
+ *     or the LLM this time -> cached
+ *   - "accepted" -> passed cosine, sent to the LLM in this query's batch
+ *   - "numeric_exempt" -> ALSO sent to the LLM: a pair whose wording reads
+ *     as near-duplicate but whose numbers differ is deliberately let
+ *     through the upper cosine bound (see passes_upper_bound() on the
+ *     backend) and joins the same batched LLM call as "accepted" pairs —
+ *     it is not a separate, lesser outcome.
+ *   - anything else (same_document, similarity_below_threshold,
+ *     near_duplicate, false_positive_suppressed, over_pair_limit) never
+ *     reached the LLM -> rejected
+ *
+ * Note: this backend's cosine filter and its LLM batch call are the same
+ * event — there is no pair that "passed cosine" but then stalled before
+ * being sent, so `cosine_passed` (tint with no badge) is never actually
+ * produced here. It stays part of the type because the visual design
+ * calls for it as a distinct step; a future pipeline change that
+ * separates those two stages would just start producing it.
+ */
+function getPairState(reason: string): PairState {
+  if (reason === 'cached_verdict') return 'cached'
+  if (reason === 'accepted' || reason === 'numeric_exempt') return 'sent_to_llm'
+  return 'rejected'
+}
+
+const PAIR_ROW_TINT: Record<PairState, string> = {
+  cached: 'bg-blue-600/[0.06] dark:bg-blue-500/10',
+  sent_to_llm: 'bg-green-600/[0.06] dark:bg-green-500/10',
+  cosine_passed: 'bg-green-600/[0.06] dark:bg-green-500/10',
+  rejected: '',
+}
+
+function PairStateBadge({ state }: { state: PairState }) {
+  if (state === 'sent_to_llm') {
+    return (
+      <span className="inline-flex items-center rounded-md border border-green-700/40 bg-green-600/10 px-2 py-0.5 text-[11px] font-medium text-green-800 dark:border-green-400/40 dark:bg-green-400/10 dark:text-green-400">
+        Accepted
+      </span>
+    )
+  }
+  if (state === 'cached') {
+    return (
+      <span className="inline-flex items-center rounded-md border border-blue-300 bg-blue-500/10 px-2 py-0.5 text-[11px] font-medium text-blue-800 dark:border-blue-400/40 dark:bg-blue-400/10 dark:text-blue-400">
+        Cached
+      </span>
+    )
+  }
+  // rejected (and the currently-unreachable cosine_passed) — no badge, no
+  // "Rejected" label, no explanation. It just quietly didn't progress.
+  return null
+}
+
+/** Cached first, then sent-to-LLM by cosine descending, then rejected
+ * (left in whatever order the backend logged them) — reads top to bottom
+ * as a funnel: reused verdicts, this query's real adjudication work
+ * ranked by relevance, then everything that fell away. */
+function sortPairsForDisplay(filterLog: PairDecision[]): PairDecision[] {
+  const byState = (state: PairState) => filterLog.filter((p) => getPairState(p.reason) === state)
+  return [
+    ...byState('cached'),
+    ...byState('sent_to_llm').sort((a, b) => (b.cosine ?? 0) - (a.cosine ?? 0)),
+    ...byState('rejected'),
+  ]
+}
+
+function PairFilterTable({
+  filterLog,
+  docNameByChunkId,
+}: {
+  filterLog: PairDecision[]
+  docNameByChunkId: Map<string, { document_name: string }>
+}) {
+  const sorted = useMemo(() => sortPairsForDisplay(filterLog), [filterLog])
+
+  return (
+    <div className="overflow-x-auto rounded-md border">
+      <table className="w-full table-fixed text-sm">
+        <thead>
+          <tr className="border-b bg-muted/50 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <th className="px-3 py-2">Pair</th>
+            <th className="w-[70px] px-3 py-2 text-right">Cosine</th>
+            <th className="w-[90px] px-3 py-2 text-right">{/* badge column, no header label */}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((pair, i) => {
+            const state = getPairState(pair.reason)
+            const nameA = docNameByChunkId.get(pair.chunk_a_id)?.document_name ?? pair.chunk_a_id.slice(0, 8)
+            const nameB = docNameByChunkId.get(pair.chunk_b_id)?.document_name ?? pair.chunk_b_id.slice(0, 8)
+            return (
+              <tr key={i} className={cn('border-t first:border-t-0', PAIR_ROW_TINT[state])}>
+                <td className="break-words px-3 py-2 align-top">
+                  {nameA} ↔ {nameB}
+                </td>
+                <td className="break-words px-3 py-2 text-right align-top tabular-nums text-muted-foreground">
+                  {/* Gated on `state`, not just "is cosine non-null": a pair
+                      capped by over_pair_limit (rejected) still has a real
+                      cosine score on the backend, but showing it here would
+                      invite "why did 0.79 make it and 0.74 didn't?" — the
+                      whole point of a rejected row is to sit there quietly,
+                      not to be second-guessed. */}
+                  {state === 'sent_to_llm' || state === 'cosine_passed' ? (
+                    pair.cosine?.toFixed(2)
+                  ) : state === 'cached' ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="cursor-help underline decoration-dotted underline-offset-2">—</span>
+                      </TooltipTrigger>
+                      <TooltipContent>Score not computed — verdict retrieved from cache.</TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    '—'
+                  )}
+                </td>
+                <td className="px-3 py-2 text-right align-top">
+                  <PairStateBadge state={state} />
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
 
 function ContradictionAnalysisTab({
   stage,
@@ -322,38 +453,7 @@ function ContradictionAnalysisTab({
         {stage.filter_log.length === 0 ? (
           <p className="text-sm text-muted-foreground">No pairs were evaluated.</p>
         ) : (
-          <TraceTable
-            headers={['Pair', 'Cosine', 'Decision']}
-            rows={stage.filter_log.map((p) => [
-              <span key="pair">
-                {docNameByChunkId.get(p.chunk_a_id)?.document_name ?? p.chunk_a_id.slice(0, 8)} ↔{' '}
-                {docNameByChunkId.get(p.chunk_b_id)?.document_name ?? p.chunk_b_id.slice(0, 8)}
-              </span>,
-              p.cosine !== null ? (
-                <span key="cosine" className="tabular-nums">
-                  {p.cosine.toFixed(2)}
-                </span>
-              ) : (
-                <Tooltip key="cosine">
-                  <TooltipTrigger asChild>
-                    <span className="cursor-help tabular-nums text-muted-foreground underline decoration-dotted underline-offset-2">
-                      —
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>Score not computed — verdict retrieved from cache.</TooltipContent>
-                </Tooltip>
-              ),
-              p.accepted ? (
-                <span key="decision" className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-950 dark:text-green-400">
-                  Accepted
-                </span>
-              ) : (
-                <span key="decision" className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                  Rejected · {REJECTION_LABELS[p.reason] ?? p.reason}
-                </span>
-              ),
-            ])}
-          />
+          <PairFilterTable filterLog={stage.filter_log} docNameByChunkId={docNameByChunkId} />
         )}
       </div>
 
@@ -416,8 +516,8 @@ function SourceCell({ name, page, section }: { name: string; page: number | null
   const meta = formatSection(page, section)
   return (
     <div>
-      <p className="font-medium">{name}</p>
-      {meta && <p className="text-xs text-muted-foreground">{meta}</p>}
+      <p className="break-words font-medium">{name}</p>
+      {meta && <p className="break-words text-xs text-muted-foreground">{meta}</p>}
     </div>
   )
 }
@@ -456,8 +556,14 @@ function TraceTable({
   columnWidths?: string[]
 }) {
   return (
+    // table-fixed (+ break-words on every cell below) is what actually stops
+    // the horizontal scrollbar: without it, a table auto-sizes each column to
+    // its unwrapped content, so a long filename or snippet just pushes the
+    // table wider than its container instead of wrapping. overflow-x-auto
+    // stays only as a defensive fallback — table-fixed means it shouldn't
+    // normally trigger.
     <div className="overflow-x-auto rounded-md border">
-      <table className="w-full text-sm">
+      <table className="w-full table-fixed text-sm">
         <thead>
           <tr className="border-b bg-muted/50 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
             {headers.map((h, i) => (
@@ -482,7 +588,7 @@ function TraceTable({
                 )}
               >
                 {cells.map((cell, j) => (
-                  <td key={j} className={cn('px-3 py-2 align-top', columnWidths?.[j])}>
+                  <td key={j} className={cn('break-words px-3 py-2 align-top', columnWidths?.[j])}>
                     {cell}
                   </td>
                 ))}

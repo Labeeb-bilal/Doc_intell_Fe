@@ -12,6 +12,18 @@ dist
 dist-ssr
 *.local
 
+# Env files — .env.local etc. are already caught by *.local above, but a
+# bare .env (no VITE_ prefix requirement stops someone from putting a real
+# secret in one) is not, so it's listed explicitly. .env.example stays
+# tracked — it has no leading "*" wildcard from *.local to catch it, and no
+# rule below matches it either.
+.env
+.env.*.local
+
+# Test / build caches
+coverage
+*.tsbuildinfo
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

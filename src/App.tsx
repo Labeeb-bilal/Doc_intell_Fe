@@ -27,6 +27,7 @@ export default function App() {
               <Route index element={<Navigate to="/upload" replace />} />
               <Route path="/upload" element={<UploadPage />} />
               <Route path="/chat" element={<ChatPage />} />
+              <Route path="/conversation/:conversationId" element={<ChatPage />} />
               <Route path="/contradictions" element={<ContradictionsPage />} />
               <Route path="/library" element={<LibraryPage />} />
             </Route>

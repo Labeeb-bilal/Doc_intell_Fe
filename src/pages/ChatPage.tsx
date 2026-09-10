@@ -1,5 +1,5 @@
-import { Fragment, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Fragment, useEffect, useRef, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, FolderOpen, MessageSquare, Plus, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -35,8 +35,10 @@ interface LocalExchange {
 }
 
 export default function ChatPage() {
-  const [searchParams, setSearchParams] = useSearchParams()
-  const conversationId = searchParams.get('c') ?? undefined
+  // Route-driven: "/chat" (no id, new conversation) or
+  // "/conversation/:conversationId" (an existing one) — see App.tsx.
+  const { conversationId } = useParams<{ conversationId: string }>()
+  const navigate = useNavigate()
 
   const [input, setInput] = useState('')
   const [localExchanges, setLocalExchanges] = useState<LocalExchange[]>([])
@@ -47,7 +49,45 @@ export default function ChatPage() {
   // switch (sidebar click) or from the URL at mount. A conversation created by our own
   // send is rendered entirely from `localExchanges` — fetching its history the moment
   // `conversationId` first becomes defined would duplicate the turn we just showed.
-  const [historyFetchId, setHistoryFetchId] = useState(() => searchParams.get('c') ?? undefined)
+  const [historyFetchId, setHistoryFetchId] = useState(() => conversationId)
+  // Set right before we navigate to a conversation id WE just created via a send
+  // (see runQuery's onSuccess) — lets the effect below tell "the URL changed
+  // because our own send just created a conversation" apart from "the URL
+  // changed because the sidebar (global or in-page) was clicked", which must
+  // reset historyFetchId/localExchanges to load that conversation's history.
+  const justCreatedIdRef = useRef<string | undefined>(undefined)
+
+  // Handles conversation switches that happen OUTSIDE this component's own
+  // handlers — e.g. clicking a past chat in AppShell's global sidebar, or
+  // landing on /conversation/:id directly (a refresh, a pasted link).
+  useEffect(() => {
+    // Bug fixed here: `justCreatedIdRef.current` is `undefined` whenever
+    // it's NOT armed, and `conversationId` is also `undefined` on plain
+    // "/chat" — so a bare `conversationId === justCreatedIdRef.current`
+    // matched THAT case too (undefined === undefined), which made this
+    // effect treat every navigation to "/chat" as "we just created this,
+    // nothing to reset" and skip clearing historyFetchId/localExchanges.
+    // That's why the "+ New chat" link (a plain <NavLink to="/chat">,
+    // which never calls handleNewConversation) kept showing the previous
+    // conversation's messages. Requiring the ref to hold an actual id
+    // closes that hole.
+    if (justCreatedIdRef.current !== undefined && conversationId === justCreatedIdRef.current) {
+      justCreatedIdRef.current = undefined
+      return
+    }
+    if (conversationId !== historyFetchId) {
+      setHistoryFetchId(conversationId)
+      setLocalExchanges([])
+      // A draft sitting in the composer belongs to whatever conversation was
+      // open when it was typed — an external switch (sidebar click) must not
+      // carry it into the next one. handleSelectConversation/handleNewConversation
+      // below already clear it for switches THEY trigger; this covers the ones
+      // they don't (e.g. AppShell's "+ New chat" link, a bare NavLink that
+      // never calls either handler).
+      setInput('')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversationId])
 
   const { data: stats } = useStats()
   const { data: conversations, isLoading: conversationsLoading } = useConversations()
@@ -86,7 +126,10 @@ export default function ChatPage() {
         onSuccess: (response) => {
           cancelStages()
           setLocalExchanges((prev) => prev.map((ex) => (ex.id === id ? { ...ex, status: 'success', response } : ex)))
-          if (!conversationId) setSearchParams({ c: response.conversation_id })
+          if (!conversationId) {
+            justCreatedIdRef.current = response.conversation_id
+            navigate(`/conversation/${response.conversation_id}`, { replace: true })
+          }
         },
         onError: (err) => {
           cancelStages()
@@ -117,14 +160,15 @@ export default function ChatPage() {
   }
 
   function handleSelectConversation(id: string) {
-    setSearchParams({ c: id })
+    if (id !== conversationId) navigate(`/conversation/${id}`)
     setHistoryFetchId(id)
     setLocalExchanges([])
+    setInput('')
     setMobileView('chat')
   }
 
   function handleNewConversation() {
-    setSearchParams({}, { replace: true })
+    if (conversationId) navigate('/chat')
     setHistoryFetchId(undefined)
     setLocalExchanges([])
     setInput('')
@@ -135,11 +179,11 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-full flex-col md:flex-row">
+      {/* Mobile-only: the conversation list has a permanent home in AppShell's
+          global sidebar on desktop (md and up), so this in-page list is only
+          needed as the "list" half of the mobile list/chat toggle. */}
       <aside
-        className={cn(
-          'flex w-full flex-col border-b md:w-72 md:shrink-0 md:border-b-0 md:border-r',
-          mobileView === 'chat' && 'hidden md:flex',
-        )}
+        className={cn('w-full flex-col border-b md:hidden', mobileView === 'list' ? 'flex' : 'hidden')}
       >
         <div className="border-b p-3">
           <Button variant="outline" className="w-full gap-2" onClick={handleNewConversation}>
@@ -193,7 +237,7 @@ export default function ChatPage() {
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-4">
-          <div className="mx-auto max-w-3xl space-y-4">
+          <div className="mx-auto max-w-5xl space-y-4">
             {historyFetchId && messagesLoading ? (
               <ChatSkeleton />
             ) : !hasAnyMessages ? (
@@ -250,7 +294,7 @@ export default function ChatPage() {
         </div>
 
         <div className="border-t p-3">
-          <div className="mx-auto max-w-3xl">
+          <div className="mx-auto max-w-5xl">
             {!documentsLoaded ? (
               <Skeleton className="h-16 w-full" />
             ) : !hasDocuments ? (
