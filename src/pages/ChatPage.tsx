@@ -4,7 +4,7 @@ import { ArrowLeft, FolderOpen, MessageSquare, Plus, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
-import { ChatMessage } from '@/components/ChatMessage'
+import { ChatMessage, TypingIndicator } from '@/components/ChatMessage'
 import { CitationPanel } from '@/components/CitationPanel'
 import { EmptyState } from '@/components/EmptyState'
 import {
@@ -35,8 +35,6 @@ interface LocalExchange {
 }
 
 export default function ChatPage() {
-  // Route-driven: "/chat" (no id, new conversation) or
-  // "/conversation/:conversationId" (an existing one) — see App.tsx.
   const { conversationId } = useParams<{ conversationId: string }>()
   const navigate = useNavigate()
 
@@ -45,32 +43,10 @@ export default function ChatPage() {
   const [openCitation, setOpenCitation] = useState<Citation | null>(null)
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('chat')
   const [loadingStage, setLoadingStage] = useState(0)
-  // Deliberately separate from `conversationId`: only set on an explicit conversation
-  // switch (sidebar click) or from the URL at mount. A conversation created by our own
-  // send is rendered entirely from `localExchanges` — fetching its history the moment
-  // `conversationId` first becomes defined would duplicate the turn we just showed.
   const [historyFetchId, setHistoryFetchId] = useState(() => conversationId)
-  // Set right before we navigate to a conversation id WE just created via a send
-  // (see runQuery's onSuccess) — lets the effect below tell "the URL changed
-  // because our own send just created a conversation" apart from "the URL
-  // changed because the sidebar (global or in-page) was clicked", which must
-  // reset historyFetchId/localExchanges to load that conversation's history.
   const justCreatedIdRef = useRef<string | undefined>(undefined)
 
-  // Handles conversation switches that happen OUTSIDE this component's own
-  // handlers — e.g. clicking a past chat in AppShell's global sidebar, or
-  // landing on /conversation/:id directly (a refresh, a pasted link).
   useEffect(() => {
-    // Bug fixed here: `justCreatedIdRef.current` is `undefined` whenever
-    // it's NOT armed, and `conversationId` is also `undefined` on plain
-    // "/chat" — so a bare `conversationId === justCreatedIdRef.current`
-    // matched THAT case too (undefined === undefined), which made this
-    // effect treat every navigation to "/chat" as "we just created this,
-    // nothing to reset" and skip clearing historyFetchId/localExchanges.
-    // That's why the "+ New chat" link (a plain <NavLink to="/chat">,
-    // which never calls handleNewConversation) kept showing the previous
-    // conversation's messages. Requiring the ref to hold an actual id
-    // closes that hole.
     if (justCreatedIdRef.current !== undefined && conversationId === justCreatedIdRef.current) {
       justCreatedIdRef.current = undefined
       return
@@ -78,12 +54,6 @@ export default function ChatPage() {
     if (conversationId !== historyFetchId) {
       setHistoryFetchId(conversationId)
       setLocalExchanges([])
-      // A draft sitting in the composer belongs to whatever conversation was
-      // open when it was typed — an external switch (sidebar click) must not
-      // carry it into the next one. handleSelectConversation/handleNewConversation
-      // below already clear it for switches THEY trigger; this covers the ones
-      // they don't (e.g. AppShell's "+ New chat" link, a bare NavLink that
-      // never calls either handler).
       setInput('')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -104,13 +74,6 @@ export default function ChatPage() {
     return () => timers.forEach(clearTimeout)
   }
 
-  /**
-   * Conversational context for the LLM's prompt only — never for retrieval,
-   * and never a DB read; the last up-to-2 user turns already sitting in
-   * this page's own state (historical + this-session local exchanges),
-   * excluding the turn identified by `excludeId` (the one being sent right
-   * now, whether a fresh send or a retry — never its own history).
-   */
   function recentUserHistory(excludeId: string) {
     const historical = (historicalMessages ?? []).filter((m) => m.role === 'user').map((m) => m.content)
     const local = localExchanges.filter((ex) => ex.id !== excludeId).map((ex) => ex.query)
@@ -179,9 +142,6 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-full flex-col md:flex-row">
-      {/* Mobile-only: the conversation list has a permanent home in AppShell's
-          global sidebar on desktop (md and up), so this in-page list is only
-          needed as the "list" half of the mobile list/chat toggle. */}
       <aside
         className={cn('w-full flex-col border-b md:hidden', mobileView === 'list' ? 'flex' : 'hidden')}
       >
@@ -266,6 +226,7 @@ export default function ChatPage() {
                 {localExchanges.map((ex) => (
                   <Fragment key={ex.id}>
                     <ChatMessage role="user" content={ex.query} />
+                    {ex.status === 'pending' && <TypingIndicator stage={LOADING_STAGES[loadingStage]} />}
                     {ex.status === 'success' && ex.response && (
                       <ChatMessage
                         role="assistant"
@@ -304,12 +265,13 @@ export default function ChatPage() {
                 description="Upload a document before you can start chatting."
                 action={{ label: 'Go to upload', href: '/upload' }}
               />
-            ) : chatMutation.isPending ? (
-              <div className="flex h-[72px] items-center justify-center px-4 text-center text-sm text-muted-foreground">
-                {LOADING_STAGES.slice(0, loadingStage + 1).join(' → ')}
-              </div>
             ) : (
-              <Composer value={input} onChange={setInput} onSend={handleSend} />
+              <Composer
+                value={input}
+                onChange={setInput}
+                onSend={handleSend}
+                disabled={chatMutation.isPending}
+              />
             )}
           </div>
         </div>
@@ -324,10 +286,12 @@ function Composer({
   value,
   onChange,
   onSend,
+  disabled = false,
 }: {
   value: string
   onChange: (value: string) => void
   onSend: () => void
+  disabled?: boolean
 }) {
   const nearLimit = value.length > 1800
 
@@ -343,10 +307,11 @@ function Composer({
               onSend()
             }
           }}
-          placeholder="Ask a question about your documents…"
+          placeholder={disabled ? 'Waiting for a response…' : 'Ask a question about your documents…'}
           aria-label="Chat message"
           rows={2}
           maxLength={2000}
+          disabled={disabled}
           className="resize-none"
         />
         {nearLimit && (
@@ -362,7 +327,7 @@ function Composer({
       </div>
       <Button
         onClick={onSend}
-        disabled={!value.trim()}
+        disabled={disabled || !value.trim()}
         size="icon"
         className="h-10 w-10 shrink-0"
         aria-label="Send message"

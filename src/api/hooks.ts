@@ -24,17 +24,12 @@ export type PairDecision = components['schemas']['PairDecision']
 export type Citation = components['schemas']['Citation']
 export type ContradictionStatus = 'open' | 'resolved' | 'false_positive'
 
-/** Sum of documents_by_status — StatsResponse has no flat total_documents field. */
 export function totalDocuments(stats: StatsResponse | undefined): number {
   if (!stats) return 0
   return Object.values(stats.documents_by_status).reduce((sum, n) => sum + n, 0)
 }
 
 const isInFlight = (status: string) => status === 'pending' || status === 'processing'
-
-// ---------------------------------------------------------------------------
-// Documents
-// ---------------------------------------------------------------------------
 
 export function useDocuments(status?: string) {
   return useQuery({
@@ -106,31 +101,11 @@ export function useStats() {
   })
 }
 
-// ---------------------------------------------------------------------------
-// Chat
-// ---------------------------------------------------------------------------
-
 export function useChat() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (body: ChatRequest) => apiClient.post<ChatResponse>('/api/chat', body),
     onSuccess: () => {
-      // Conversation list metadata (title/message_count) and contradiction counts
-      // change on every turn. The active conversation's own message history is
-      // intentionally NOT invalidated here — ChatPage renders the turn just sent
-      // from the mutation response itself (which alone carries `contradictions`;
-      // GET .../messages does not), so refetching would either race that render
-      // or duplicate it once historical and local turns overlap.
-      //
-      // `exact: true` is load-bearing, not decoration: invalidateQueries matches
-      // by KEY PREFIX by default, and useMessages()'s key is
-      // ['conversations', conversationId, 'messages'] — sharing the
-      // ['conversations'] prefix. Without `exact`, this call silently also
-      // invalidates (and, for the conversation currently open, refetches) that
-      // messages query — reintroducing the exact duplicate-render bug the
-      // comment above claims doesn't happen, specifically for a follow-up sent
-      // in a conversation that was opened via the sidebar (so its messages
-      // query is already active) rather than a brand-new one.
       queryClient.invalidateQueries({ queryKey: ['conversations'], exact: true })
       queryClient.invalidateQueries({ queryKey: ['contradictions'] })
     },
@@ -172,13 +147,9 @@ export function useMessageTrace(
         `/api/conversations/${conversationId}/messages/${messageId}/trace`,
       ),
     enabled: enabled && !!conversationId && !!messageId,
-    staleTime: Infinity, // a persisted trace never changes
+    staleTime: Infinity,
   })
 }
-
-// ---------------------------------------------------------------------------
-// Contradictions
-// ---------------------------------------------------------------------------
 
 export interface ContradictionFilters {
   status?: string
@@ -217,13 +188,11 @@ export function useContradiction(id: string | undefined) {
 }
 
 interface UpdateContradictionVars {
-  /** Every evidence-row id backing the group being updated (PATCH is per-row). */
   evidenceIds: string[]
   status: ContradictionStatus
   note?: string
 }
 
-/** Replaces `status` on every cached group whose evidence overlaps `evidenceIds`. */
 function withUpdatedStatus(
   data: ContradictionListResponse | undefined,
   evidenceIds: string[],

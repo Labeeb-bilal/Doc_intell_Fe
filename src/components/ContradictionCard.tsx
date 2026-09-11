@@ -24,10 +24,6 @@ interface ContradictionCardProps {
 export function ContradictionCard({ group, selectable, selected, onSelectChange }: ContradictionCardProps) {
   const [noteOpen, setNoteOpen] = useState(false)
   const [note, setNote] = useState('')
-  // Own optimistic copy of status, seeded from the prop. Needed because this card
-  // is used inline in chat with `group` sourced from local component state (a chat
-  // turn's response), not from the `contradictions` query cache — so the mutation's
-  // cache-level optimistic update alone wouldn't make THIS card flip instantly.
   const [status, setStatus] = useState(group.status)
   const updateMutation = useUpdateContradiction()
   const { toast } = useToast()

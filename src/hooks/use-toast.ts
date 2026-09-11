@@ -1,6 +1,5 @@
 "use client"
 
-// Inspired by react-hot-toast library
 import * as React from "react"
 
 import type {
@@ -9,8 +8,6 @@ import type {
 } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 3
-// Visible duration is governed by ToastProvider's `duration` prop (5s, set in Toaster.tsx).
-// This just delays removing a dismissed toast from state until its exit animation finishes.
 const TOAST_REMOVE_DELAY = 1000
 
 type ToasterToast = ToastProps & {
@@ -95,8 +92,6 @@ export const reducer = (state: State, action: Action): State => {
     case "DISMISS_TOAST": {
       const { toastId } = action
 
-      // ! Side effects ! - This could be extracted into a dismissToast() action,
-      // but I'll keep it here for simplicity
       if (toastId) {
         addToRemoveQueue(toastId)
       } else {

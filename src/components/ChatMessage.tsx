@@ -13,14 +13,6 @@ import type { Citation, ContradictionGroupOut } from '@/api/hooks'
 
 const CITATION_TOKEN = /\[S(\d+)\]/g
 
-/**
- * Rewrites `[S1]` into a markdown link (`[S1](#cite-1)`) before parsing.
- * Markdown links are valid inline content anywhere — including inside table
- * cells, bold spans, list items — so this is what lets citation chips render
- * correctly no matter where the model places them, without a custom remark
- * plugin. The `a` component override below turns `#cite-N` links into chips
- * and leaves any other link (rare, but the model could emit one) untouched.
- */
 function toCitationLinks(content: string): string {
   return content.replace(CITATION_TOKEN, (_match, num: string) => `[S${num}](#cite-${num})`)
 }
@@ -34,7 +26,6 @@ export interface ChatMessageProps {
   conversationId?: string
   messageId?: string
   onCitationClick?: (citation: Citation) => void
-  /** Assistant-side error turn: renders the message as an error with a retry action. */
   errorMessage?: string
   onRetry?: () => void
 }
@@ -102,9 +93,20 @@ export function ChatMessage({
   )
 }
 
-// ---------------------------------------------------------------------------
-// Prose with inline [Sn] chips
-// ---------------------------------------------------------------------------
+export function TypingIndicator({ stage }: { stage?: string }) {
+  return (
+    <div className="flex animate-in justify-start fade-in slide-in-from-bottom-2 duration-300">
+      <div className="flex items-center gap-2 rounded-2xl border bg-card px-4 py-3 text-sm shadow-sm">
+        <span className="flex items-center gap-1">
+          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.3s]" />
+          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.15s]" />
+          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground" />
+        </span>
+        {stage && <span className="text-muted-foreground">{stage}</span>}
+      </div>
+    </div>
+  )
+}
 
 function AnswerProse({
   content,
@@ -126,9 +128,6 @@ function AnswerProse({
 
   const linked = useMemo(() => toCitationLinks(content), [content])
 
-  // Same styled elements every raw-markdown view in the app uses
-  // (MarkdownProse) — only `a` differs here, rewriting #cite-N links into
-  // citation chips (see toCitationLinks above).
   const components: Components = useMemo(
     () => ({
       ...baseMarkdownComponents,
@@ -162,10 +161,6 @@ function AnswerProse({
   )
 }
 
-// ---------------------------------------------------------------------------
-// Source strip
-// ---------------------------------------------------------------------------
-
 function SourceStrip({
   citations,
   onCitationClick,
@@ -192,10 +187,6 @@ function SourceStrip({
     </div>
   )
 }
-
-// ---------------------------------------------------------------------------
-// Contradiction alert
-// ---------------------------------------------------------------------------
 
 function ContradictionAlert({ contradictions, total }: { contradictions: ContradictionGroupOut[]; total: number }) {
   const [expanded, setExpanded] = useState(false)
@@ -227,10 +218,6 @@ function ContradictionAlert({ contradictions, total }: { contradictions: Contrad
     </div>
   )
 }
-
-// ---------------------------------------------------------------------------
-// Trace disclosure
-// ---------------------------------------------------------------------------
 
 function TraceDisclosure({
   conversationId,

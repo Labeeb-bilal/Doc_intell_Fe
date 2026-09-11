@@ -1,16 +1,6 @@
 import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
-/**
- * One shared set of styled markdown elements, reused everywhere source-
- * document text can legitimately contain markdown syntax (bold, lists,
- * tables, ...): the assistant's own answer (ChatMessage's AnswerProse,
- * which overrides `a` for citation chips), a raw .md source excerpt
- * (CitationPanel), and a quoted .md contradiction statement
- * (ContradictionCard). Centralised so all three render `**bold**` the
- * same way instead of each reimplementing (or forgetting to implement)
- * the same style map.
- */
 export const baseMarkdownComponents: Components = {
   a: ({ href, children }) => (
     <a href={href} target="_blank" rel="noreferrer" className="underline underline-offset-2">
@@ -45,8 +35,6 @@ export const baseMarkdownComponents: Components = {
   hr: () => <hr className="my-3 border-border" />,
 }
 
-/** Renders `content` as markdown using baseMarkdownComponents, optionally
- * overridden (e.g. ChatMessage.tsx overrides `a` to render citation chips). */
 export function MarkdownProse({
   content,
   components,

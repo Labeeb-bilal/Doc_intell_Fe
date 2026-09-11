@@ -1,6 +1,5 @@
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
-/** 12-char nanoid-style request id, no extra dependency needed for this alone. */
 function requestId(): string {
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
   let id = ''
@@ -37,7 +36,6 @@ async function parseErrorBody(res: Response): Promise<ApiError> {
   try {
     body = await res.json()
   } catch {
-    // response wasn't JSON — fall through to a generic error below
   }
   const code = body?.error?.code ?? 'UNKNOWN_ERROR'
   const message = body?.error?.message ?? res.statusText ?? 'Something went wrong.'
@@ -46,7 +44,6 @@ async function parseErrorBody(res: Response): Promise<ApiError> {
 
 interface RequestOptions extends Omit<RequestInit, 'body'> {
   body?: unknown
-  /** Send `body` as-is (e.g. FormData) instead of JSON-encoding it. */
   raw?: boolean
 }
 

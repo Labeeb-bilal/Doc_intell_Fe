@@ -76,10 +76,6 @@ function LibrarySkeleton() {
   )
 }
 
-// ---------------------------------------------------------------------------
-// Desktop table — name, type, size, status, uploaded, delete
-// ---------------------------------------------------------------------------
-
 interface TableProps {
   documents: DocumentOut[]
   expandedId: string | null
@@ -191,10 +187,6 @@ function FilenameCell({ doc }: { doc: DocumentOut }) {
   )
 }
 
-// ---------------------------------------------------------------------------
-// Mobile cards — filename, type, size, status, uploaded, delete
-// ---------------------------------------------------------------------------
-
 function MobileCards({ documents, expandedId, onToggle, onDelete }: TableProps) {
   return (
     <div className="space-y-3 md:hidden">
@@ -241,11 +233,6 @@ function MobileCards({ documents, expandedId, onToggle, onDelete }: TableProps) 
   )
 }
 
-// ---------------------------------------------------------------------------
-// Expanded detail — effective date (when present), file type, size, upload
-// date, status. Nothing else: no embedding model, no attempts, no chunks.
-// ---------------------------------------------------------------------------
-
 function DocumentDetailPanel({ document }: { document: DocumentOut }) {
   return (
     <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm md:grid-cols-3">
@@ -268,10 +255,6 @@ function DetailField({ label, value }: { label: string; value: ReactNode }) {
     </div>
   )
 }
-
-// ---------------------------------------------------------------------------
-// Delete confirmation
-// ---------------------------------------------------------------------------
 
 function DeleteDialog({ document, onOpenChange }: { document: DocumentOut | null; onOpenChange: (open: boolean) => void }) {
   const deleteMutation = useDeleteDocument()

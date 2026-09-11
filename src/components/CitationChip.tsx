@@ -3,7 +3,6 @@ interface CitationChipProps {
   onClick: () => void
 }
 
-/** The small teal [Sn] pill rendered inline in answer prose and in the source strip. */
 export function CitationChip({ marker, onClick }: CitationChipProps) {
   return (
     <button

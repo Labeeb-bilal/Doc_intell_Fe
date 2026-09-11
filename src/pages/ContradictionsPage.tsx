@@ -60,7 +60,6 @@ export default function ContradictionsPage() {
           status: 'resolved',
         })
       } catch {
-        // Individual failures already surface via the mutation's own error toast.
       }
     }
     setBulkRunning(false)
@@ -72,7 +71,6 @@ export default function ContradictionsPage() {
       <h1 className="text-xl font-semibold">Contradictions</h1>
       <p className="mt-1 text-sm text-muted-foreground">Review conflicts detected across your documents.</p>
 
-      {/* Summary chips */}
       <div className="mt-4 flex flex-wrap gap-2">
         <SummaryChip
           label="open"
@@ -94,7 +92,6 @@ export default function ContradictionsPage() {
         />
       </div>
 
-      {/* Filters */}
       <div className="mt-4 flex flex-wrap gap-2">
         <Select value={severityFilter || ANY} onValueChange={(v) => setSeverityFilter(v === ANY ? '' : v)}>
           <SelectTrigger className="h-8 w-[140px] text-xs" aria-label="Filter by severity">
@@ -139,7 +136,6 @@ export default function ContradictionsPage() {
         </Select>
       </div>
 
-      {/* Bulk action */}
       {selected.size > 0 && (
         <div className="mt-4 flex animate-in items-center gap-2 rounded-md border bg-secondary/50 px-3 py-2 fade-in slide-in-from-top-1 duration-200">
           <span className="text-sm">{selected.size} selected</span>
@@ -152,7 +148,6 @@ export default function ContradictionsPage() {
         </div>
       )}
 
-      {/* Card list */}
       <div className="mt-6 space-y-3">
         {isLoading ? (
           <>

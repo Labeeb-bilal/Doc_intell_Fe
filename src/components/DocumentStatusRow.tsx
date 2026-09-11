@@ -5,10 +5,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { cn, formatBytes, getFileExtension, truncate, type SupportedFileType } from '@/lib/utils'
 import type { DocumentOut } from '@/api/hooks'
 
-// ---------------------------------------------------------------------------
-// File type icon — shared with LibraryPage
-// ---------------------------------------------------------------------------
-
 const FILE_TYPE_STYLES: Record<SupportedFileType | 'other', { icon: typeof FileText; className: string }> = {
   pdf: { icon: FileText, className: 'text-red-600 dark:text-red-400' },
   docx: { icon: FileType, className: 'text-blue-600 dark:text-blue-400' },
@@ -21,10 +17,6 @@ export function FileTypeIcon({ type, className }: { type: SupportedFileType | 'o
   const { icon: Icon, className: colorClassName } = FILE_TYPE_STYLES[type]
   return <Icon className={cn('h-5 w-5 shrink-0', colorClassName, className)} aria-hidden="true" />
 }
-
-// ---------------------------------------------------------------------------
-// Status pill — shared with LibraryPage
-// ---------------------------------------------------------------------------
 
 export function StatusPill({ status, chunkCount }: { status: string; chunkCount?: number | null }) {
   switch (status) {
@@ -65,12 +57,7 @@ export function StatusPill({ status, chunkCount }: { status: string; chunkCount?
   }
 }
 
-// ---------------------------------------------------------------------------
-// Row
-// ---------------------------------------------------------------------------
-
 export interface PendingUpload {
-  /** Local-only row before the server document record resolves (or duplicate). */
   filename: string
   sizeBytes: number
   duplicate: boolean
@@ -122,9 +109,6 @@ export function DocumentStatusRow({ rowKey, document, pending, onRetry, onDismis
         </Tooltip>
 
         <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{formatBytes(sizeBytes)}</span>
-        {/* key={status}: remounts on every status change, replaying the
-            fade-in — a small "pop" that makes pending -> processing -> ready
-            register as something happened, not just a silent swap. */}
         <span key={status} className="animate-in fade-in zoom-in-95 duration-300">
           <StatusPill status={status} chunkCount={document?.chunk_count} />
         </span>

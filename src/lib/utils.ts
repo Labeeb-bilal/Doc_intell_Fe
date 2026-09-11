@@ -5,7 +5,6 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-/** Formats an ISO timestamp as a relative time ("2m ago", "3h ago", "Sep 5") */
 export function formatDate(iso: string | null | undefined): string {
   if (!iso) return '—'
   const date = new Date(iso)
@@ -30,7 +29,6 @@ export function formatDate(iso: string | null | undefined): string {
   })
 }
 
-/** Formats an absolute date (no relative phrasing) — used for effective dates. */
 export function formatAbsoluteDate(iso: string | null | undefined): string {
   if (!iso) return '—'
   const date = new Date(iso)
@@ -42,7 +40,6 @@ export function formatAbsoluteDate(iso: string | null | undefined): string {
   })
 }
 
-/** Formats a byte count as a human-readable size ("1.4 MB"). */
 export function formatBytes(bytes: number | null | undefined): string {
   if (bytes === null || bytes === undefined || Number.isNaN(bytes)) return '—'
   if (bytes === 0) return '0 B'
@@ -52,7 +49,6 @@ export function formatBytes(bytes: number | null | undefined): string {
   return `${exponent === 0 ? value : value.toFixed(1)} ${units[exponent]}`
 }
 
-/** Formats a page/section pair into a compact source label ("p.2 · Eligibility"). */
 export function formatSection(page?: number | null, section?: string | null): string {
   const parts: string[] = []
   if (page !== null && page !== undefined) parts.push(`p.${page}`)
@@ -60,7 +56,6 @@ export function formatSection(page?: number | null, section?: string | null): st
   return parts.join(' · ')
 }
 
-/** Truncates a string to a max length, adding an ellipsis when it overflows. */
 export function truncate(value: string, maxLength: number): string {
   if (value.length <= maxLength) return value
   return `${value.slice(0, maxLength - 1)}…`
@@ -68,7 +63,6 @@ export function truncate(value: string, maxLength: number): string {
 
 export type SupportedFileType = 'pdf' | 'docx' | 'md' | 'txt'
 
-/** Extracts a supported file type from a filename's extension (lowercased, no dot). */
 export function getFileExtension(filename: string): SupportedFileType | 'other' {
   const ext = filename.split('.').pop()?.toLowerCase()
   if (ext === 'pdf' || ext === 'docx' || ext === 'md' || ext === 'txt') return ext

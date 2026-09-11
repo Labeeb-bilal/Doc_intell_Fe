@@ -27,7 +27,6 @@ function useSidebarOpen() {
       const saved = localStorage.getItem(SIDEBAR_STORAGE_KEY)
       if (saved !== null) return saved === 'true'
     } catch {
-      // localStorage can throw (private mode, blocked site data) — fall through to the default.
     }
     return typeof window === 'undefined' || window.innerWidth >= 768
   })
@@ -36,7 +35,6 @@ function useSidebarOpen() {
     try {
       localStorage.setItem(SIDEBAR_STORAGE_KEY, String(open))
     } catch {
-      // per-viewer convenience only — losing this on a blocked store is fine.
     }
   }, [open])
 
@@ -76,7 +74,6 @@ export function AppShell() {
 
   return (
     <div className="flex h-screen flex-col overflow-hidden md:flex-row">
-      {/* Desktop sidebar */}
       <aside
         className={cn(
           'relative hidden shrink-0 border-r bg-card transition-all duration-200 md:flex md:flex-col',
@@ -108,20 +105,13 @@ export function AppShell() {
           ))}
         </nav>
 
-        {/* Chat history — fills the rest of the sidebar below the nav, same
-            spot ChatGPT/Claude put it. Hidden when collapsed (icon rail only
-            has room for the nav icons). */}
         {sidebarOpen && <ChatHistorySection />}
       </aside>
 
-      {/* Main content — each route scrolls internally within this fixed-height area.
-          A route that needs its own scroll regions (ChatPage) fills it exactly with
-          h-full and manages overflow itself. */}
       <main className="flex-1 overflow-y-auto pb-16 md:pb-0">
         <Outlet />
       </main>
 
-      {/* Mobile bottom tab bar — icon only, badges as a small dot */}
       <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t bg-card md:hidden">
         {NAV_ITEMS.map((item) => (
           <TabBarLink key={item.to} item={item} badgeCount={getBadge(badges, item.to)} />
@@ -131,11 +121,6 @@ export function AppShell() {
   )
 }
 
-/** Past conversations, filling the sidebar below the nav (ChatGPT/Claude
- * style): a "New chat" affordance up top, then the list itself scrolling
- * independently in the remaining space. Clicking an entry jumps straight to
- * /conversation/:id (see App.tsx / ChatPage.tsx) — that route reads the id
- * from the URL and loads that conversation's history. */
 function ChatHistorySection() {
   const { conversationId } = useParams<{ conversationId: string }>()
   const { data: conversations, isLoading } = useConversations()
@@ -226,11 +211,6 @@ function SidebarLink({
       }
     >
       {collapsed ? (
-        // Badge positioned relative to the icon itself, not the padded link
-        // pill: at w-14 collapsed, the pill's own content box is only ~31px
-        // (nav's px-3 eats into the 56px rail), too narrow for a centered
-        // icon and a corner badge to both fit without overlapping. Anchoring
-        // to the icon's own small box sidesteps that regardless of pill width.
         <span className="relative inline-flex">
           <item.icon className="h-4 w-4 shrink-0" aria-hidden="true" />
           {badgeCount !== undefined && badgeCount > 0 && (
@@ -258,11 +238,6 @@ function SidebarLink({
 
   return (
     <Tooltip>
-      {/* asChild on a plain span, not on NavLink directly: Radix's Slot
-          merges className as a string, but NavLink's className is a
-          function (for isActive) — merging onto it directly breaks that,
-          which in turn dropped the `relative` positioning context the
-          collapsed badge's `absolute` depends on. The span isolates that. */}
       <TooltipTrigger asChild>
         <span className="block">{link}</span>
       </TooltipTrigger>

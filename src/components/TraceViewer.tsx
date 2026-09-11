@@ -16,10 +16,6 @@ interface TraceViewerProps {
   conversationId: string
   messageId: string
   citations: Citation[]
-  /** The same contradiction groups already shown inline in the chat message
-   * (if any) — reused here rather than refetched, so the compact per-verdict
-   * list in the Contradiction analysis tab has type/confidence/explanation
-   * without a second data source. */
   contradictions?: ContradictionGroupOut[]
   enabled: boolean
 }
@@ -87,13 +83,6 @@ export function TraceViewer({ conversationId, messageId, citations, contradictio
   )
 }
 
-// ---------------------------------------------------------------------------
-// Tab 1 — Retrieved
-// ---------------------------------------------------------------------------
-
-// Exactly one column per table (Snippet here; Source in the others below)
-// is left without a fixed width — under table-fixed that column alone
-// absorbs whatever space the fixed-width columns don't use.
 const RETRIEVED_WIDTHS = ['w-12', 'w-[190px]', 'w-[90px]', '', 'w-[60px]']
 
 function RetrievedTab({
@@ -135,10 +124,6 @@ function RetrievedTab({
     />
   )
 }
-
-// ---------------------------------------------------------------------------
-// Tab 2 — Reranked
-// ---------------------------------------------------------------------------
 
 function RerankedTab({
   rerank,
@@ -223,10 +208,6 @@ function DeltaBadge({ delta }: { delta: number }) {
   )
 }
 
-// ---------------------------------------------------------------------------
-// Tab 3 — Used in answer
-// ---------------------------------------------------------------------------
-
 function UsedTab({
   chunksUsed,
   neighbourExpansion,
@@ -292,40 +273,8 @@ function UsedTab({
   )
 }
 
-// ---------------------------------------------------------------------------
-// Tab 4 — Contradiction analysis: the pair-filtering funnel
-//
-// Every candidate pair moves through the same four stages left to right as
-// it survives more of the pipeline (see services/contradictions.py):
-// generated -> passed cosine -> sent to the LLM, OR reused from the cache
-// entirely (skipping cosine). This section renders each pair's *final*
-// resting point, not a blow-by-blow of every stage.
-// ---------------------------------------------------------------------------
-
 type PairState = 'rejected' | 'cosine_passed' | 'sent_to_llm' | 'cached'
 
-/**
- * `filter_log` reasons, straight from the backend (see
- * services/contradictions.py's `_decision()` call sites):
- *   - "cached_verdict" -> reused from a prior query, never touched cosine
- *     or the LLM this time -> cached
- *   - "accepted" -> passed cosine, sent to the LLM in this query's batch
- *   - "numeric_exempt" -> ALSO sent to the LLM: a pair whose wording reads
- *     as near-duplicate but whose numbers differ is deliberately let
- *     through the upper cosine bound (see passes_upper_bound() on the
- *     backend) and joins the same batched LLM call as "accepted" pairs —
- *     it is not a separate, lesser outcome.
- *   - anything else (same_document, similarity_below_threshold,
- *     near_duplicate, false_positive_suppressed, over_pair_limit) never
- *     reached the LLM -> rejected
- *
- * Note: this backend's cosine filter and its LLM batch call are the same
- * event — there is no pair that "passed cosine" but then stalled before
- * being sent, so `cosine_passed` (tint with no badge) is never actually
- * produced here. It stays part of the type because the visual design
- * calls for it as a distinct step; a future pipeline change that
- * separates those two stages would just start producing it.
- */
 function getPairState(reason: string): PairState {
   if (reason === 'cached_verdict') return 'cached'
   if (reason === 'accepted' || reason === 'numeric_exempt') return 'sent_to_llm'
@@ -354,15 +303,9 @@ function PairStateBadge({ state }: { state: PairState }) {
       </span>
     )
   }
-  // rejected (and the currently-unreachable cosine_passed) — no badge, no
-  // "Rejected" label, no explanation. It just quietly didn't progress.
   return null
 }
 
-/** Cached first, then sent-to-LLM by cosine descending, then rejected
- * (left in whatever order the backend logged them) — reads top to bottom
- * as a funnel: reused verdicts, this query's real adjudication work
- * ranked by relevance, then everything that fell away. */
 function sortPairsForDisplay(filterLog: PairDecision[]): PairDecision[] {
   const byState = (state: PairState) => filterLog.filter((p) => getPairState(p.reason) === state)
   return [
@@ -388,7 +331,7 @@ function PairFilterTable({
           <tr className="border-b bg-muted/50 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
             <th className="px-3 py-2">Pair</th>
             <th className="w-[70px] px-3 py-2 text-right">Cosine</th>
-            <th className="w-[90px] px-3 py-2 text-right">{/* badge column, no header label */}</th>
+            <th className="w-[90px] px-3 py-2 text-right"></th>
           </tr>
         </thead>
         <tbody>
@@ -402,12 +345,6 @@ function PairFilterTable({
                   {nameA} ↔ {nameB}
                 </td>
                 <td className="break-words px-3 py-2 text-right align-top tabular-nums text-muted-foreground">
-                  {/* Gated on `state`, not just "is cosine non-null": a pair
-                      capped by over_pair_limit (rejected) still has a real
-                      cosine score on the backend, but showing it here would
-                      invite "why did 0.79 make it and 0.74 didn't?" — the
-                      whole point of a rejected row is to sit there quietly,
-                      not to be second-guessed. */}
                   {state === 'sent_to_llm' || state === 'cosine_passed' ? (
                     pair.cosine?.toFixed(2)
                   ) : state === 'cached' ? (
@@ -508,10 +445,6 @@ function DetailStat({ label, value }: { label: string; value: number }) {
   )
 }
 
-// ---------------------------------------------------------------------------
-// Shared bits
-// ---------------------------------------------------------------------------
-
 function SourceCell({ name, page, section }: { name: string; page: number | null; section: string }) {
   const meta = formatSection(page, section)
   return (
@@ -540,8 +473,6 @@ function DroppedTag() {
 
 interface TraceTableRow {
   highlight?: boolean
-  /** Dropped/unused rows render dimmed (text-muted-foreground) once real
-   * scores are visible for every candidate, not just survivors. */
   dim?: boolean
   cells: ReactNode[]
 }
@@ -556,12 +487,6 @@ function TraceTable({
   columnWidths?: string[]
 }) {
   return (
-    // table-fixed (+ break-words on every cell below) is what actually stops
-    // the horizontal scrollbar: without it, a table auto-sizes each column to
-    // its unwrapped content, so a long filename or snippet just pushes the
-    // table wider than its container instead of wrapping. overflow-x-auto
-    // stays only as a defensive fallback — table-fixed means it shouldn't
-    // normally trigger.
     <div className="overflow-x-auto rounded-md border">
       <table className="w-full table-fixed text-sm">
         <thead>
